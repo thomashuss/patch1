@@ -3,6 +3,7 @@ from os import cpu_count
 import pandas as pd
 import numpy as np
 import re
+from typing import NamedTuple
 from pathlib import Path
 from .patchfiles import write_patchfile, read_patchfile
 from .common import *
@@ -13,12 +14,29 @@ _TAGS_SEP = '|'
 FXP_CHUNK = 'chunk'
 FXP_PARAMS = 'params'
 PATCH_FILE = PATCH_FILE_EXT
+JOBS = min(4, cpu_count())
 
 # Create a series with all default values for filling in sparsely defined patches.
 INIT_PATCH = pd.Series(PARAM_VALS, index=PARAM_NAMES, dtype=int)
 
 # Columns of a dataframe containing patch metadeta.
 META_DF_COLS = ['bank', 'num', 'patch_name', 'color', 'ver', 'tags']
+
+
+class PatchMetadata(NamedTuple):
+    index: int
+    name: str
+    bank: str
+    num: str
+    color: str
+    ver: str
+    tags: str
+
+    @classmethod
+    def from_patch(cls, patch: pd.Series):
+        """Constructs a new `PatchMetadata` object from the `patch`."""
+
+        return cls(patch.name, patch['patch_name'], patch['bank'], patch['num'], patch['color'], patch['ver'], tags_to_str(patch['tags']))
 
 
 class PatchDatabase:
@@ -58,7 +76,7 @@ class PatchDatabase:
             # Running *all* this I/O on a single thread is just so slow...
             # In my testing 4 has been the optimal number of processes (anything >6 is a bottleneck)
             # but don't do it if the machine doesn't have that many logical cpus.
-            with multiprocessing.Pool(processes=min(4, cpu_count())) as pool:
+            with multiprocessing.Pool(processes=JOBS) as pool:
                 # Don't care about the order yet, they'll be sorted later.
                 for patch in pool.imap_unordered(read_patchfile, files):
                     meta.append(patch[0])
@@ -220,5 +238,6 @@ def encode_tags(tags: list, old_tags: str = '') -> str:
 
     return old_tags + _TAGS_SEP.join(tags)
 
-__all__ = ['PatchDatabase', 'tags_to_list', 'tags_to_str',
+
+__all__ = ['PatchDatabase', 'PatchMetadata', 'tags_to_list', 'tags_to_str',
            'encode_tags', 'FXP_CHUNK', 'FXP_PARAMS', 'PATCH_FILE']

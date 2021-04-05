@@ -38,27 +38,30 @@ class App:
 
         self.load_config()
 
-    def put_patch(self, patch):
+    def put_patch(self, patch: PatchMetadata):
         """Define this function in an implementation of `App`. It should
         add the `patch` to a list of patches visible to the user."""
 
         pass
 
+    def _put_patch(self, patch):
+        self.put_patch(PatchMetadata.from_patch(patch))
+
     def keyword_search(self, kwd: str):
         """Searches for patches matching keyword `kwd` and calls `put_patch` on them."""
 
-        self._db.keyword_search(kwd).apply(self.put_patch, axis=1)
+        self._db.keyword_search(kwd).apply(self._put_patch, axis=1)
 
     def search_by_bank(self, bank: str):
         """Searches for patches in bank `bank` and calls `put_patch` on them."""
 
         self._db.find_patches_by_val(
-            bank, 'bank', exact=True).apply(self.put_patch, axis=1)
+            bank, 'bank', exact=True).apply(self._put_patch, axis=1)
 
     def search_by_tags(self, tags: list):
         """Searches for patches matching `tags` and calls `put_patch` on them."""
 
-        self._db.find_patches_by_tags(tags).apply(self.put_patch, axis=1)
+        self._db.find_patches_by_tags(tags).apply(self._put_patch, axis=1)
 
     def refresh(self):
         """Refreshes cached indexes."""
@@ -145,6 +148,11 @@ class App:
         self._exe.submit(self._db.write_patch, ind, self._config.get('synth_interface',
                                                                      'quick_export_as'), self.quick_tmp)
         return str(self.quick_tmp)
+    
+    def by_index(self, ind: int):
+        """Returns the patch at index `ind`."""
+
+        return PatchMetadata.from_patch(self._db.get_patch_by_index(ind))
 
     def end(self):
         """Housekeeping before exiting the program."""

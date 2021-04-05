@@ -3,8 +3,9 @@ import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 from collections import namedtuple
 from random import choice
+from .data import PatchMetadata
 from .common import *
-from. app import App
+from .app import App
 if DND_SUPPORT:
     from tkinterdnd2 import *
 
@@ -82,9 +83,10 @@ class AppGui(App, ttk.Frame):
         ttk.Frame.__init__(self, master)
         self.pack()
         self.root = self.master.winfo_toplevel()
-        self.root.withdraw()
 
+        self.root.withdraw()
         self.root.protocol('WM_DELETE_WINDOW', self.end)
+        self.root.report_callback_exception = self.err
 
         ################################################
         ############# BEGIN UI DEFINITIONS #############
@@ -116,6 +118,7 @@ class AppGui(App, ttk.Frame):
         help = tk.Menu(menubar, tearoff=False)
         help.add_command(label='About', command=lambda: messagebox.showinfo(
             'About %s' % APP_NAME, '%s 0.0.1\nTame your %s patches' % (APP_NAME, SYNTH_NAME)))
+
         menubar.add_cascade(label='Help', menu=help)
         self.master.config(menu=menubar)
 
@@ -217,11 +220,12 @@ class AppGui(App, ttk.Frame):
         super().__init__()
         self.status(STATUS_READY)
 
-    def err(self, msg):
+    # The two unused parameters are to make the thing work as a Tkinter error callback
+    def err(self, ex=None, val='', tb=None):
         """Displays an error message to the user."""
 
         self.status(STATUS_READY)
-        messagebox.showerror('Error', msg)
+        messagebox.showerror('Error', str(val))
 
     def wait(self):
         """Informs the user that the program is busy."""
@@ -240,9 +244,9 @@ class AppGui(App, ttk.Frame):
         for w in self.busy_wids:
             w.config(state=tk.NORMAL)
 
-    def put_patch(self, patch):
-        self.patch_list.insert('', patch.name, patch.name, values=(
-            patch['patch_name'], patch['tags']), tags=(patch['color']))
+    def put_patch(self, patch: PatchMetadata):
+        self.patch_list.insert('', patch.index, patch.index, values=(
+            patch.name, patch.tags), tags=(patch.color))
 
     def empty_patches(self):
         """Empties the patch Treeview."""
@@ -282,7 +286,16 @@ class AppGui(App, ttk.Frame):
             self.active_patch = int(sel[0])
         else:
             self.active_patch = -1
-        # self.update_meta()
+        self.update_meta()
+    
+    def update_meta(self):
+        patch = self.by_index(self.active_patch)
+        self.info_list.set([
+            'Name:', patch.name, '',
+            'Bank:', '%s (#%s)' % (patch.bank, patch.num), '',
+            'Tags:', patch.tags, '',
+            '%s version:' % SYNTH_NAME, patch.ver
+        ])
 
     def quick_export(self, _):
         """Event handler for dragging an entry from the patch `Treeview`."""
@@ -361,32 +374,23 @@ class AppGui(App, ttk.Frame):
         dir = filedialog.askdirectory(
             title='Select the folder containing your %s banks:' % SYNTH_NAME, initialdir=FILE_KWARGS['initialdir'])
         if len(dir) != 0:
-            try:
-                self.status(STATUS_IMPORT)
-                super().new_database(dir)
-            except Exception as e:
-                self.err(e)
+            self.status(STATUS_IMPORT)
+            super().new_database(dir)
 
     def open_database_prompt(self):
         """Prompts the user to select a previously saved database."""
 
         path = filedialog.askopenfilename(**FILE_KWARGS)
         if len(path) != 0:
-            try:
-                self.status(STATUS_OPEN)
-                super().open_database(path)
-            except Exception as e:
-                self.err(e)
+            self.status(STATUS_OPEN)
+            super().open_database(path)
 
     def save_database_prompt(self):
         """Prompts the user to select a location for saving the active database to disk."""
 
         path = filedialog.asksaveasfilename(**FILE_KWARGS)
         if len(path) != 0:
-            try:
-                super().save_database(path)
-            except Exception as e:
-                self.err(e)
+            super().save_database(path)
 
     def end(self):
         """Closes the program."""

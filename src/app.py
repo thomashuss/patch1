@@ -8,7 +8,6 @@ from .common import *
 CONFIG_FILE = DATA_DIR / 'config.ini'
 DEFAULT_CONFIG = {
     'database': {
-        'file': DATA_DIR / ('db.%s' % DB_FILE_EXT),
         'auto_load': True,
         'auto_save': True
     },
@@ -86,6 +85,18 @@ class App:
 
         self._db.tags_from_val_defs(TAGS_NAMES, 'patch_name')
         self.refresh()
+    
+    def tag_similar(self):
+        """Tags patches based on their similarity to other patches."""
+
+        self._db.classify_tags()
+        self.refresh()
+    
+    def create_model(self):
+        """Creates a model for identifying patches based on similarity."""
+
+        self._db.train_classifier()
+        self.refresh()
 
     def new_database(self, dir):
         """Creates a new database with patches from `dir`."""
@@ -98,11 +109,14 @@ class App:
         if not isinstance(path, Path):
             path = Path(path)
 
-        if path.is_file():
-            self._config.set('database', 'file', str(path))
-            self.reload(PatchDatabase.from_file(path))
-        elif not silent:
-            raise Exception('That is not a valid database file.')
+        if path.is_dir():
+            try:
+                self.reload(PatchDatabase.from_disk(path))
+            except:
+                if not silent:
+                    raise Exception('That is not a valid data folder.')
+                else:
+                    self._db = PatchDatabase()
         else:
             self._db = PatchDatabase()
 
@@ -110,7 +124,7 @@ class App:
         """Saves the active database to disk."""
 
         if self._db.is_active():
-            self._db.to_file(path)
+            self._db.to_disk(path)
 
     def load_config(self):
         """Loads the config file for the program, or create one if it doesn't exist."""
@@ -129,8 +143,7 @@ class App:
         self.quick_tmp.touch(exist_ok=True)
 
         if self._config.getboolean('database', 'auto_load'):
-            self.open_database(self._config.get(
-                'database', 'file'), silent=True)
+            self.open_database(DATA_DIR, silent=True)
 
     def export_patch(self, ind: int, typ=PATCH_FILE, path=None):
         """Exports the patch at index `ind`."""
@@ -158,7 +171,7 @@ class App:
         """Housekeeping before exiting the program."""
 
         if self._config.getboolean('database', 'auto_save'):
-            self.save_database(self._config.get('database', 'file'))
+            self.save_database(DATA_DIR)
 
         with open(CONFIG_FILE, 'w') as cfile:
             self._config.write(cfile)

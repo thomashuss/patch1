@@ -2,6 +2,7 @@ import multiprocessing
 import pandas as pd
 import numpy as np
 import re
+import pickle
 from typing import NamedTuple
 from pathlib import Path
 from sklearn.pipeline import Pipeline
@@ -17,6 +18,8 @@ from .preset2fxp import *
 _TAGS_SEP = '|'
 FXP_CHUNK = 'chunk'
 FXP_PARAMS = 'params'
+DB_FILE = 'db'
+CLS_FILE = 'cls'
 PATCH_FILE = PATCH_FILE_EXT
 JOBS = min(4, cpu_count())
 
@@ -53,13 +56,15 @@ class PatchDatabase:
     tags = []
     banks = []
 
-    def __init__(self, df: pd.DataFrame = None):
-        """Creates a new `PatchDatabase` instance from the `DataFrame`, or a blank instance if none specified.
-        It is typical in practice that this function will rarely be called directly."""
+    def __init__(self, df: pd.DataFrame = None, classifier: Pipeline = None):
+        """Don't call this function directly."""
 
         if df is not None:
             self._df = df
             self.refresh()
+
+            if classifier is not None:
+                self._knn = classifier
 
     @classmethod
     def bootstrap(cls, root_dir: Path):
@@ -79,8 +84,6 @@ class PatchDatabase:
                            != None, root_dir.glob('**/*'))
 
             # Running *all* this I/O on a single thread is just so slow...
-            # In my testing 4 has been the optimal number of processes (anything >6 is a bottleneck)
-            # but don't do it if the machine doesn't have that many logical cpus.
             with multiprocessing.Pool(processes=JOBS) as pool:
                 # Don't care about the order yet, they'll be sorted later.
                 for patch in pool.imap_unordered(read_patchfile, files):
@@ -105,23 +108,35 @@ class PatchDatabase:
             return e
 
     @classmethod
-    def from_file(cls, path):
-        """Creates a new `PatchDatabase` instance after loading a database from the file."""
+    def from_disk(cls, path: Path):
+        """Creates a new `PatchDatabase` instance after loading a database from the directory `path`."""
 
+        if not isinstance(path, Path):
+            path = Path(path)
         try:
-            return cls(pd.read_parquet(path))
+            df = pd.read_parquet(path / DB_FILE)
+            knn = None
+            if (path / CLS_FILE).is_file():
+                with open(path / CLS_FILE, 'rb') as f:
+                    knn = pickle.load(f)
+            return cls(df, knn)
         except Exception as e:
             return e
 
-    def is_active(self):
+    def is_active(self) -> bool:
         """Returns `True` if a database is loaded, `False` otherwise."""
 
         return self._df is not None
 
-    def to_file(self, path):
-        """Saves the active database into a file."""
+    def to_disk(self, path: Path):
+        """Saves the active database to the directory `path`."""
 
-        self._df.to_parquet(path)
+        if not isinstance(path, Path):
+            path = Path(path)
+        self._df.to_parquet(path / DB_FILE)
+        if self._knn is not None:
+            with open(path / CLS_FILE, 'wb') as f:
+                pickle.dump(self._knn, f)
 
     def refresh(self):
         """Rebuilds cached indexes for the active database."""
@@ -136,6 +151,8 @@ class PatchDatabase:
 
         tagged_mask = self._df['tags'] != ''
         df = self._df.loc[tagged_mask]
+        if len(df) == 0:
+            raise Exception('Add some tags and try again.')
         df_slice = df[PARAM_NAMES]
 
         indicators = self._tags[tagged_mask]
@@ -242,7 +259,7 @@ class PatchDatabase:
             def apply(row):
                 return encode_tags(list(val for val, pattern in defs.items()
                                         if pattern.search(row[col])), row['tags'])
-            self._df['tags'] = self._df['tags'].apply(apply, axis=1)
+            self._df['tags'] = self._df.apply(apply, axis=1)
 
             self.refresh()
 

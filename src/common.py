@@ -5,7 +5,6 @@ from sys import platform
 
 APP_NAME = 'Patch1'
 SYNTH_NAME = 'Synth1'
-DB_FILE_EXT = 'pa1'
 PATCH_FILE_EXT = 'sy1'
 FXP_FILE_EXT = 'fxp'
 DATA_DIR = Path.home() / ('.%s' % APP_NAME.lower())
@@ -41,3 +40,4 @@ STATUS_NAME_TAG = 'name_tag'
 STATUS_SIM_TAG = 'similar_tag'
 STATUS_OPEN = 'opening'
 STATUS_SEARCH = 'searching'
+STATUS_WAIT = 'wait'

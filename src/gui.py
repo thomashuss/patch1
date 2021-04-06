@@ -16,7 +16,8 @@ STATUS_MSGS = {
     STATUS_NAME_TAG: 'Running name-based tagging...',
     STATUS_SIM_TAG: 'Running parameter-based tagging...',
     STATUS_OPEN: 'Opening database...',
-    STATUS_SEARCH: 'Searching...'
+    STATUS_SEARCH: 'Searching...',
+    STATUS_WAIT: 'Working...'
 }
 
 TAGS_TAB = 'tags'
@@ -39,9 +40,7 @@ TREE_COLORS = (TreeColor('red', '#ff4d4f'), TreeColor('blue', '#5557fa'), TreeCo
 LB_KWARGS = {'width': 25, 'height': 30, 'selectbackground': '#d6be48'}
 
 # Common properties of open/save dialogs
-FILE_KWARGS = {'filetypes': (
-    ('%s database files' % APP_NAME, '*.%s' % DB_FILE_EXT), ('All files', '*')),
-    'initialdir': str(DATA_DIR)}
+FILE_KWARGS = {'filetypes': (('All files', '*')), 'initialdir': str(DATA_DIR)}
 
 
 def scrollbars(master, box, drawX=True, drawY=True):
@@ -100,10 +99,6 @@ class AppGui(App, ttk.Frame):
         file = tk.Menu(menubar, tearoff=False)
         file.add_command(label='Create new database',
                          command=self.new_database_prompt)
-        file.add_command(label='Open database...',
-                         command=self.open_database_prompt)
-        file.add_command(label='Save database...',
-                         command=self.save_database_prompt)
         file.add_separator()
         file.add_command(label='Exit', command=self.end)
         menubar.add_cascade(label='File', menu=file)
@@ -111,7 +106,11 @@ class AppGui(App, ttk.Frame):
         edit = tk.Menu(menubar, tearoff=False)
         edit.add_command(label='Run name-based tagging...',
                          command=self.tag_names)
+        edit.add_command(label='Run parameter-based tagging...',
+                         command=self.tag_similar)
         edit.add_separator()
+        edit.add_command(label='(Re-)train model...',
+                         command=self.create_model)
         edit.add_command(label='Settings')
         menubar.add_cascade(label='Edit', menu=edit)
 
@@ -287,7 +286,7 @@ class AppGui(App, ttk.Frame):
         else:
             self.active_patch = -1
         self.update_meta()
-    
+
     def update_meta(self):
         patch = self.by_index(self.active_patch)
         self.info_list.set([
@@ -357,6 +356,18 @@ class AppGui(App, ttk.Frame):
 
         self.status(STATUS_NAME_TAG)
         super().tag_names()
+    
+    def tag_similar(self):
+        """Begins the process of tagging patches based on their parameters."""
+
+        self.status(STATUS_SIM_TAG)
+        super().tag_similar()
+
+    def create_model(self):
+        """Begins the process of creating a model for parameter-based tagging."""
+
+        self.status(STATUS_WAIT)
+        super().create_model()
 
     def status(self, msg):
         """Updates the status indicator with the static status message defined by `msg`."""
@@ -376,21 +387,6 @@ class AppGui(App, ttk.Frame):
         if len(dir) != 0:
             self.status(STATUS_IMPORT)
             super().new_database(dir)
-
-    def open_database_prompt(self):
-        """Prompts the user to select a previously saved database."""
-
-        path = filedialog.askopenfilename(**FILE_KWARGS)
-        if len(path) != 0:
-            self.status(STATUS_OPEN)
-            super().open_database(path)
-
-    def save_database_prompt(self):
-        """Prompts the user to select a location for saving the active database to disk."""
-
-        path = filedialog.asksaveasfilename(**FILE_KWARGS)
-        if len(path) != 0:
-            super().save_database(path)
 
     def end(self):
         """Closes the program."""

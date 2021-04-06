@@ -231,23 +231,26 @@ class AppGui(App, ttk.Frame):
 
         print_exception(ex, val, tb)
         self.err(str(val))
+    
+    def busy_state(self, state):
+        """Updates all busy widgets to `state`."""
+
+        for w in self.busy_wids:
+            w.config(state=state)
 
     def wait(self):
         """Informs the user that the program is busy."""
 
         self.root.config(cursor='watch')
-        for w in self.busy_wids:
-            # disable widgets that could change the program state while it's still loading something
-            w.config(state=tk.DISABLED)
-
+        # disable widgets that could change the program state while it's still loading something
+        self.busy_state(tk.DISABLED)
         self.master.update()  # update in case something locks the ui
 
     def unwait(self):
         """Informs the user that the program is no longer busy."""
 
         self.root.config(cursor='')
-        for w in self.busy_wids:
-            w.config(state=tk.NORMAL)
+        self.busy_state(tk.NORMAL)
 
     def put_patch(self, patch: PatchMetadata):
         self.patch_list.insert('', patch.index, patch.index, values=(
@@ -299,12 +302,15 @@ class AppGui(App, ttk.Frame):
 
         if self.active_patch > -1:
             patch = self.by_index(self.active_patch)
-            self.info_list.set([
+            to_set = [
                 'Name:', patch.name, '',
                 'Bank:', '%s (#%s)' % (patch.bank, patch.num), '',
                 'Tags:', patch.tags, '',
                 '%s version:' % SYNTH_NAME, patch.ver
-            ])
+            ]
+        else:
+            to_set = ''
+        self.info_list.set(to_set)
 
     def quick_export(self, _):
         """Event handler for dragging an entry from the patch `Treeview`."""

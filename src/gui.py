@@ -1,11 +1,12 @@
-from __main__ import DND_SUPPORT
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
+from traceback import print_exception
 from collections import namedtuple
 from random import choice
 from .data import PatchMetadata
 from .common import *
 from .app import App
+from __main__ import DND_SUPPORT
 if DND_SUPPORT:
     from tkinterdnd2 import *
 
@@ -85,7 +86,7 @@ class AppGui(App, ttk.Frame):
 
         self.root.withdraw()
         self.root.protocol('WM_DELETE_WINDOW', self.end)
-        self.root.report_callback_exception = self.err
+        self.root.report_callback_exception = self.exc
 
         ################################################
         ############# BEGIN UI DEFINITIONS #############
@@ -97,7 +98,7 @@ class AppGui(App, ttk.Frame):
 
         menubar = tk.Menu(self.master)
         file = tk.Menu(menubar, tearoff=False)
-        file.add_command(label='Create new database',
+        file.add_command(label='Create new database...',
                          command=self.new_database_prompt)
         file.add_separator()
         file.add_command(label='Exit', command=self.end)
@@ -219,12 +220,17 @@ class AppGui(App, ttk.Frame):
         super().__init__()
         self.status(STATUS_READY)
 
-    # The two unused parameters are to make the thing work as a Tkinter error callback
-    def err(self, ex=None, val='', tb=None):
+    def err(self, msg: str):
         """Displays an error message to the user."""
 
         self.status(STATUS_READY)
-        messagebox.showerror('Error', str(val))
+        messagebox.showerror('Error', msg)
+
+    def exc(self, ex, val, tb):
+        """Exception handler for Tkinter."""
+
+        print_exception(ex, val, tb)
+        self.err(str(val))
 
     def wait(self):
         """Informs the user that the program is busy."""
@@ -252,6 +258,7 @@ class AppGui(App, ttk.Frame):
 
         kids = self.patch_list.get_children()
         if len(kids) > 0:
+            self.update_active_patch()
             self.patch_list.delete(*kids)
 
     def count_patches(self):
@@ -276,7 +283,7 @@ class AppGui(App, ttk.Frame):
         self.status_text.set(new_text)
         self.unwait()
 
-    def update_active_patch(self, _):
+    def update_active_patch(self, _=None):
         """Updates the cache of the currently active patch."""
 
         sel = self.patch_list.selection()
@@ -288,18 +295,22 @@ class AppGui(App, ttk.Frame):
         self.update_meta()
 
     def update_meta(self):
-        patch = self.by_index(self.active_patch)
-        self.info_list.set([
-            'Name:', patch.name, '',
-            'Bank:', '%s (#%s)' % (patch.bank, patch.num), '',
-            'Tags:', patch.tags, '',
-            '%s version:' % SYNTH_NAME, patch.ver
-        ])
+        """Updates the metadata pane with information about the selected patch."""
+
+        if self.active_patch > -1:
+            patch = self.by_index(self.active_patch)
+            self.info_list.set([
+                'Name:', patch.name, '',
+                'Bank:', '%s (#%s)' % (patch.bank, patch.num), '',
+                'Tags:', patch.tags, '',
+                '%s version:' % SYNTH_NAME, patch.ver
+            ])
 
     def quick_export(self, _):
         """Event handler for dragging an entry from the patch `Treeview`."""
 
-        return (MOVE, DND_FILES, super().quick_export(self.active_patch))
+        if self.active_patch > -1:
+            return (MOVE, DND_FILES, super().quick_export(self.active_patch))
 
     def refresh(self):
         """Refreshes the GUI to reflect new cached data."""

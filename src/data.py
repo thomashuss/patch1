@@ -1,10 +1,14 @@
 import multiprocessing
-from os import cpu_count
 import pandas as pd
 import numpy as np
 import re
 from typing import NamedTuple
 from pathlib import Path
+from sklearn.pipeline import Pipeline
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+from os import cpu_count
 from .patchfiles import write_patchfile, read_patchfile
 from .common import *
 from .sy2fxpreset import *
@@ -44,6 +48,7 @@ class PatchDatabase:
 
     _df: pd.DataFrame = None
     _tags: pd.DataFrame
+    _knn: Pipeline = None
 
     tags = []
     banks = []
@@ -125,13 +130,42 @@ class PatchDatabase:
         self.tags = self._tags.columns.to_list()
         self.banks = self.get_categories('bank')
 
+    def train_classifier(self) -> float:
+        """Constructs a k-nearest neighbors classifier for patches based on their parameters.
+        Returns the accuracy of the classifier."""
+
+        tagged_mask = self._df['tags'] != ''
+        df = self._df.loc[tagged_mask]
+        df_slice = df[PARAM_NAMES]
+
+        indicators = self._tags[tagged_mask]
+        X = df_slice.to_numpy()
+        y = indicators.to_numpy()
+
+        X_train, X_test, y_train, y_test = train_test_split(X, y)
+        self._knn = Pipeline([('scaler', StandardScaler()), ('knn', KNeighborsClassifier(
+            n_jobs=JOBS, p=1, weights='distance'))])
+        self._knn.fit(X_train, y_train)
+        return float(self._knn.score(X_test, y_test))
+
+    def classify_tags(self):
+        """Tags patches based on their parameters using the previously generated classifier model."""
+
+        assert isinstance(self._knn, Pipeline), 'Please create a classifier model first.'
+        predictions = self._knn.predict(self._df[PARAM_NAMES].to_numpy())
+
+        def classify(patch: pd.Series) -> str:
+            prediction = predictions[int(patch.name)]
+            tags = [self.tags[i] for i in np.asarray(prediction).nonzero()[0]]
+            return encode_tags(tags, patch['tags'])
+
+        self._df['tags'] = self._df.apply(classify, axis=1)
+        self.refresh()
+
     def find_patches_by_val(self, find: str, col: str, exact=False, regex=False) -> pd.DataFrame:
         """Finds metadata of patches in the database matching `find` value in column `col`, either as a substring (`exact=False`),
         an exact match (`exact=True`), or a regular expression (`regex=True`). Returns a
-        sliced `DataFrame`. Will raise `ValueError` if a tag search is attempted."""
-
-        if col == 'tags':
-            raise ValueError('Use find_patches_by_tags for tag searches')
+        sliced `DataFrame`."""
 
         if exact:
             mask = self._df[col] == find
@@ -208,7 +242,7 @@ class PatchDatabase:
             def apply(row):
                 return encode_tags(list(val for val, pattern in defs.items()
                                         if pattern.search(row[col])), row['tags'])
-            self._df['tags'] = self._df.apply(apply, axis=1)
+            self._df['tags'] = self._df['tags'].apply(apply, axis=1)
 
             self.refresh()
 
@@ -226,15 +260,15 @@ def tags_to_str(tags: str, sep: str = ', ') -> str:
 
 
 def encode_tags(tags: list, old_tags: str = '') -> str:
-    """Adds `tags` onto `old_tags`, which is either a pre-defined properly formatted string of tags or a blank
+    """Adds `tags` to `old_tags`, which is either a pre-defined properly formatted string of tags or a blank
     string, and returns a properly formatted (ragged) string of tags. Only duplicates across `tags` and `old_tags`
     will be corrected, and it is assumed that neither parameter has its own duplicates, though nothing particularly
     bad will happen if there are."""
 
     if len(old_tags) > 0:
         old_tagsl = old_tags.split(_TAGS_SEP)
-        tags = filter(lambda tag: not tag in old_tagsl, tags)
-        old_tags = old_tags + _TAGS_SEP
+        tags = list(filter(lambda tag: not tag in old_tagsl, tags))
+        old_tags = old_tags + (_TAGS_SEP if len(tags) > 0 else '')
 
     return old_tags + _TAGS_SEP.join(tags)
 

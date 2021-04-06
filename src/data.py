@@ -53,14 +53,18 @@ class PatchDatabase:
     _tags: pd.DataFrame
     _knn: Pipeline = None
 
+    modified_db = False
+    modified_cls = False
+
     tags = []
     banks = []
 
-    def __init__(self, df: pd.DataFrame = None, classifier: Pipeline = None):
+    def __init__(self, df: pd.DataFrame = None, classifier: Pipeline = None, new = False):
         """Don't call this function directly."""
 
         if df is not None:
             self._df = df
+            self.modified_db = new
             self.refresh()
 
             if classifier is not None:
@@ -103,7 +107,7 @@ class PatchDatabase:
             meta_df['ver'] = pd.Categorical(meta_df['ver'])
             meta_df['tags'] = ''
 
-            return cls(meta_df.join(param_df))
+            return cls(meta_df.join(param_df), new=True)
         except Exception as e:
             return e
 
@@ -133,8 +137,10 @@ class PatchDatabase:
 
         if not isinstance(path, Path):
             path = Path(path)
-        self._df.to_parquet(path / DB_FILE)
-        if self._knn is not None:
+
+        if self.modified_db:
+            self._df.to_parquet(path / DB_FILE)
+        if self._knn is not None and self.modified_cls:
             with open(path / CLS_FILE, 'wb') as f:
                 pickle.dump(self._knn, f)
 
@@ -145,6 +151,31 @@ class PatchDatabase:
         self.tags = self._tags.columns.to_list()
         self.banks = self.get_categories('bank')
 
+    def volatile_db(func):
+        """Wrapper for functions that modify the active database."""
+
+        def inner(self, *args, **kwargs):
+            self.modified_db = True
+            try:
+                return func(self, *args, **kwargs)
+            except BaseException as exc:
+                self.modified_db = False
+                raise exc
+        return inner
+
+    def volatile_cls(func):
+        """Wrapper for functions that modify the k-nearest neighbors classifier."""
+
+        def inner(self, *args, **kwargs):
+            self.modified_cls = True
+            try:
+                return func(self, *args, **kwargs)
+            except BaseException as exc:
+                self.modified_cls = False
+                raise exc
+        return inner
+
+    @volatile_cls
     def train_classifier(self) -> float:
         """Constructs a k-nearest neighbors classifier for patches based on their parameters.
         Returns the accuracy of the classifier."""
@@ -165,6 +196,7 @@ class PatchDatabase:
         self._knn.fit(X_train, y_train)
         return float(self._knn.score(X_test, y_test))
 
+    @volatile_db
     def classify_tags(self):
         """Tags patches based on their parameters using the previously generated classifier model."""
 
@@ -248,6 +280,7 @@ class PatchDatabase:
 
             write_fxp(preset, path)
 
+    @volatile_db
     def tags_from_val_defs(self, re_defs: dict, col: str):
         """Tags patches in the database, where the patch's `col` value matches a regular expression in `re_defs`, with the dictionary key
         of the matching expression."""

@@ -1,5 +1,17 @@
+# IDE settings
 .vscode
+
+# Build/caches
 __pycache__
-*.ipynb
+build
+dist
+hook-*.py
+venv
+*.spec
+
+# Nobody cares, Tim Cook.
 .DS_Store
 ._*
+
+# Other stuff
+*.ipynb

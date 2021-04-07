@@ -3,11 +3,9 @@ from tkinter import ttk, messagebox, filedialog
 from traceback import print_exception
 from collections import namedtuple
 from random import choice
-from .common import *
-from .app import *
-from __main__ import DND_SUPPORT
-if DND_SUPPORT:
-    from tkinterdnd2 import *
+from common import *
+from app import *
+from tkinterdnd2 import *
 
 TAGS_TAB = 'tags'
 BANKS_TAB = 'banks'
@@ -171,9 +169,8 @@ class AppGui(App, ttk.Frame):
         self.patch_list.heading('name', text='Name')
         self.patch_list.heading('patch_tags', text='Tags')
 
-        if DND_SUPPORT:
-            self.patch_list.drag_source_register(1, DND_FILES)
-            self.patch_list.dnd_bind('<<DragInitCmd>>', self.quick_export)
+        self.patch_list.drag_source_register(1, DND_FILES)
+        self.patch_list.dnd_bind('<<DragInitCmd>>', self.quick_export)
 
         ############## END PATCHES PANE ##############
 

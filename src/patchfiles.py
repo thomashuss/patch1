@@ -1,4 +1,4 @@
-from .common import *
+from common import *
 from pathlib import Path
 from numpy import nan
 import re

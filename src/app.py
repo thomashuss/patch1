@@ -2,9 +2,9 @@ import configparser
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, Future
 from typing import NamedTuple
-from .data import *
-from .sorting import TAGS_NAMES
-from .common import *
+from data import *
+from sorting import TAGS_NAMES
+from common import *
 
 CONFIG_FILE = DATA_DIR / 'config.ini'
 DEFAULT_CONFIG = {

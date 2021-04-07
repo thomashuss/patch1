@@ -9,10 +9,10 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from os import cpu_count
-from .patchfiles import write_patchfile, read_patchfile
-from .common import *
-from .sy2fxpreset import *
-from .preset2fxp import *
+from patchfiles import write_patchfile, read_patchfile
+from common import *
+from sy2fxpreset import *
+from preset2fxp import *
 
 _TAGS_SEP = '|'
 FXP_CHUNK = 'chunk'

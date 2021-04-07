@@ -3,7 +3,7 @@ from collections.abc import Sequence
 from xdrlib import Packer
 from struct import pack
 from io import BytesIO
-from .common import VER_DEF, PARAM_NAMES
+from common import VER_DEF, PARAM_NAMES
 
 
 def S1_CHUNK_HEADER(ver: int): return ('>21s11xB527xB4xB2xB',

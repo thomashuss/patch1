@@ -1,0 +1,4 @@
+# Install to a virtualenv!!
+pandas >= 1.2.3
+sklearn >= 0.0
+# Also be sure to install https://github.com/pmgagne/tkinterdnd2

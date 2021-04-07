@@ -9,17 +9,6 @@ from __main__ import DND_SUPPORT
 if DND_SUPPORT:
     from tkinterdnd2 import *
 
-
-STATUS_MSGS = {
-    STATUS_READY: 'Ready.',
-    STATUS_IMPORT: 'Importing banks...',
-    STATUS_NAME_TAG: 'Running name-based tagging...',
-    STATUS_SIM_TAG: 'Running parameter-based tagging...',
-    STATUS_OPEN: 'Opening database...',
-    STATUS_SEARCH: 'Searching...',
-    STATUS_WAIT: 'Working...'
-}
-
 TAGS_TAB = 'tags'
 BANKS_TAB = 'banks'
 MISC_SRCH_TAB = 'search'
@@ -70,9 +59,6 @@ class AppGui(App, ttk.Frame):
     info_list: tk.StringVar  # List which propogates the patch info listbox
     patch_list: ttk.Treeview  # Treeview of patches which match the search results
     kwd_entry: ttk.Entry  # Keyword search text box
-
-    last_query = str()  # Last search query, to avoid redundant queries
-    active_patch: int = -1  # Index in db of currently active patch
 
     info = messagebox.showinfo
 
@@ -214,10 +200,7 @@ class AppGui(App, ttk.Frame):
         ############## END META PANE ##############
 
         self.root.deiconify()
-
-        self.status(STATUS_OPEN)
         super().__init__()
-        self.status(STATUS_READY)
 
     def err(self, msg: str):
         """Displays an error message to the user."""
@@ -230,7 +213,7 @@ class AppGui(App, ttk.Frame):
 
         print_exception(ex, val, tb)
         self.err(str(val))
-    
+
     def busy_state(self, state):
         """Updates all busy widgets to `state`."""
 
@@ -299,17 +282,7 @@ class AppGui(App, ttk.Frame):
     def update_meta(self):
         """Updates the metadata pane with information about the selected patch."""
 
-        if self.active_patch > -1:
-            patch = self.by_index(self.active_patch)
-            to_set = [
-                'Name:', patch.name, '',
-                'Bank:', '%s (#%s)' % (patch.bank, patch.num), '',
-                'Tags:', patch.tags, '',
-                '%s version:' % SYNTH_NAME, patch.ver
-            ]
-        else:
-            to_set = ''
-        self.info_list.set(to_set)
+        self.info_list.set(super().update_meta())
 
     def quick_export(self, _):
         """Event handler for dragging an entry from the patch `Treeview`."""
@@ -321,79 +294,54 @@ class AppGui(App, ttk.Frame):
         """Refreshes the GUI to reflect new cached data."""
 
         super().refresh()
-        self.status(STATUS_READY)
         self.tags_list.set(self.tags)
         self.banks_list.set(self.banks)
 
+        # TODO only switch tab if banks or tags is selected
         if len(self.tags) == 0:
             to_select = BANKS_TAB
         else:
             to_select = TAGS_TAB
         self.search_pane.select('.!notebook.' + to_select)
 
-    def search_by_tags(self, _=None):
+    def searcher(func):
+        """Wrapper for functions that perform searches."""
+
+        # Don't want the tkinter event object.
+        def inner(self, _=None):
+            try:
+                return func(self)
+            except IndexError:
+                # An event handler for listbox selection can be called even when
+                # nothing is selected, so silently ignore it.
+                pass
+        return inner
+
+    @searcher
+    def search_by_tags(self):
         """Searches for patches matching the currently selected tag(s) in the tags `Listbox`."""
 
-        cur = self.tags_lb.curselection()
-        if len(cur) > 0:
+        super().search_by_tags([self.tags_lb.get(i)
+                                for i in self.tags_lb.curselection()])
 
-            q = [self.tags_lb.get(i) for i in cur]
-            if self.last_query != q:
-                self.last_query = q
-                self.status(STATUS_SEARCH)
-                super().search_by_tags(q)
-                self.count_patches()
-
-    def search_by_bank(self, _=None):
+    @searcher
+    def search_by_bank(self):
         """Searches for patches belonging to the currently selected bank in the banks `Listbox`."""
 
-        cur = self.banks_lb.curselection()
-        if len(cur) > 0:
+        super().search_by_bank(self.banks_lb.get(
+            self.banks_lb.curselection()[0]))
 
-            q = self.banks_lb.get(cur[0])
-            if self.last_query != q:
-                self.last_query = q
-                self.status(STATUS_SEARCH)
-                super().search_by_bank(q)
-                self.count_patches()
-
-    def search_by_kwd(self, _=None):
+    @searcher
+    def search_by_kwd(self):
         """Searches for patches matching the query currently entered in the keyword `Entry`."""
 
-        kwd = self.kwd_entry.get().strip()
-        if len(kwd) > 0 and self.last_query != kwd:
-            self.last_query = kwd
-            self.status(STATUS_SEARCH)
-            super().keyword_search(kwd)
-            self.count_patches()
-
-    def tag_names(self):
-        """Begins the process of tagging patches based on their names."""
-
-        self.status(STATUS_NAME_TAG)
-        super().tag_names()
-    
-    def tag_similar(self):
-        """Begins the process of tagging patches based on their parameters."""
-
-        self.status(STATUS_SIM_TAG)
-        super().tag_similar()
-
-    def create_model(self):
-        """Begins the process of creating a model for parameter-based tagging."""
-
-        self.status(STATUS_WAIT)
-        super().create_model()
+        super().keyword_search(self.kwd_entry.get().strip())
 
     def status(self, msg):
         """Updates the status indicator with the static status message defined by `msg`."""
 
         self.status_text.set(STATUS_MSGS[msg])
-        if msg == STATUS_READY:
-            self.unwait()
-        else:
-            self.empty_patches()
-            self.wait()
+        super().status(msg)
 
     def new_database_prompt(self):
         """Prompts the user to select a directory containing patch banks and then imports that directory."""
@@ -401,7 +349,6 @@ class AppGui(App, ttk.Frame):
         dir = filedialog.askdirectory(
             title='Select the folder containing your %s banks:' % SYNTH_NAME, initialdir=FILE_KWARGS['initialdir'])
         if len(dir) != 0:
-            self.status(STATUS_IMPORT)
             super().new_database(dir)
 
     def end(self):

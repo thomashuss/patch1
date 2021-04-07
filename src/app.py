@@ -20,6 +20,17 @@ DEFAULT_CONFIG = {
 TMP_FXP_NAME = '%s_tmp.%s' % (APP_NAME, FXP_FILE_EXT)
 TMP_PFILE_NAME = '%s.%s' % (PATCH_NUMS[0], PATCH_FILE_EXT)
 
+STATUS_MSGS = {
+    STATUS_READY: 'Ready.',
+    STATUS_IMPORT: 'Importing banks...',
+    STATUS_NAME_TAG: 'Running name-based tagging...',
+    STATUS_SIM_TAG: 'Running parameter-based tagging...',
+    STATUS_OPEN: 'Opening database...',
+    STATUS_SEARCH: 'Searching...',
+    STATUS_WAIT: 'Working...'
+}
+
+
 class PatchMetadata(NamedTuple):
     index: int
     name: str
@@ -35,53 +46,105 @@ class PatchMetadata(NamedTuple):
 
         return cls(patch.name, patch['patch_name'], patch['bank'], patch['num'], patch['color'], patch['ver'], tags_to_str(patch['tags']))
 
+
 class App:
     """Implements the program's controller."""
 
     _db: PatchDatabase  # The active patch database
     _config: configparser.ConfigParser
     _exe: ThreadPoolExecutor  # When a task needs to run in the background
+
     quick_tmp: Path  # Temporary file for quick export
+    active_patch: int = -1  # Index in db of currently active patch
+    last_query = ''  # Last search query, to avoid redundant queries
 
     tags = []  # tag indexes for active database
     banks = []  # bank indexes for active database
 
     def __init__(self):
+        """Creates a new instance of the program."""
+
+        self.status(STATUS_OPEN)
+
         self._exe = ThreadPoolExecutor(max_workers=1)
         self._config = configparser.ConfigParser()
 
         self.load_config()
-
-    def put_patch(self, patch: PatchMetadata):
-        """Define this function in an implementation of `App`. It should
-        add the `patch` to a list of patches visible to the user."""
-
-        pass
+        self.status(STATUS_READY)
 
     def _put_patch(self, patch):
+        """Internal use only"""
+
         self.put_patch(PatchMetadata.from_patch(patch))
 
-    def keyword_search(self, kwd: str):
-        """Searches for patches matching keyword `kwd` and calls `put_patch` on them."""
+    def put_patch(self, patch: PatchMetadata):
+        """Define this. It should add the `patch` to a list of patches visible to the user."""
+        pass
 
-        self._db.keyword_search(kwd).apply(self._put_patch, axis=1)
+    def wait(self):
+        """Define this. It should inform the user that the program is busy."""
+        pass
 
+    def unwait(self):
+        """Define this. It should inform the user that the program is no longer busy."""
+        pass
+
+    def empty_patches(self):
+        """Define this. It should empty the user-facing list of patches."""
+        pass
+
+    def update_meta(self) -> list:
+        """This should update the user-facing metadata list with the return value of the super function."""
+
+        if self.active_patch > -1:
+            patch = self.by_index(self.active_patch)
+            return [
+                'Name:', patch.name, '',
+                'Bank:', '%s (#%s)' % (patch.bank, patch.num), '',
+                'Tags:', patch.tags, '',
+                '%s version:' % SYNTH_NAME, patch.ver
+            ]
+        else:
+            return []
+
+    def searcher(func):
+        """Wrapper for functions that perform searches."""
+
+        def inner(self, q):
+            if len(q) > 0 and self.last_query != q:
+                self.last_query = q
+                self.status(STATUS_SEARCH)
+                func(self, q)
+                self.count_patches()
+                return True
+            return False
+        return inner
+
+    @searcher
+    def search_by_tags(self, tags: list):
+        """Searches for patches matching `tags`."""
+
+        self._db.find_patches_by_tags(tags).apply(self._put_patch, axis=1)
+
+    @searcher
     def search_by_bank(self, bank: str):
-        """Searches for patches in bank `bank` and calls `put_patch` on them."""
+        """Searches for patches in bank `bank`."""
 
         self._db.find_patches_by_val(
             bank, 'bank', exact=True).apply(self._put_patch, axis=1)
 
-    def search_by_tags(self, tags: list):
-        """Searches for patches matching `tags` and calls `put_patch` on them."""
+    @searcher
+    def keyword_search(self, kwd: str):
+        """Searches for patches matching keyword `kwd`."""
 
-        self._db.find_patches_by_tags(tags).apply(self._put_patch, axis=1)
+        self._db.keyword_search(kwd).apply(self._put_patch, axis=1)
 
     def refresh(self):
         """Refreshes cached indexes."""
 
         self.tags = self._db.tags
         self.banks = self._db.banks
+        self.status(STATUS_READY)
 
     def reload(self, result):
         """Replaces the active database instance."""
@@ -98,24 +161,37 @@ class App:
     def tag_names(self):
         """Tags patches based on their names."""
 
+        self.status(STATUS_NAME_TAG)
         self._db.tags_from_val_defs(TAGS_NAMES, 'patch_name')
         self.refresh()
-    
+
     def tag_similar(self):
         """Tags patches based on their similarity to other patches."""
 
+        self.status(STATUS_SIM_TAG)
         self._db.classify_tags()
         self.refresh()
-    
+
     def create_model(self):
         """Creates a model for identifying patches based on similarity."""
 
+        self.status(STATUS_WAIT)
         self._db.train_classifier()
         self.refresh()
+
+    def status(self, msg):
+        """Fully implement this function by updating a user-facing status indicator before calling the super."""
+
+        if msg == STATUS_READY:
+            self.unwait()
+        else:
+            self.empty_patches()
+            self.wait()
 
     def new_database(self, dir):
         """Creates a new database with patches from `dir`."""
 
+        self.status(STATUS_IMPORT)
         self.reload(PatchDatabase.bootstrap(Path(dir)))
 
     def open_database(self, path, silent=False):
@@ -176,7 +252,7 @@ class App:
         self._exe.submit(self._db.write_patch, ind, self._config.get('synth_interface',
                                                                      'quick_export_as'), self.quick_tmp)
         return str(self.quick_tmp)
-    
+
     def by_index(self, ind: int):
         """Returns the patch at index `ind`."""
 
@@ -194,4 +270,5 @@ class App:
 
         self._exe.shutdown()
 
-__all__ = ['App', 'PatchMetadata']
+
+__all__ = ['App', 'PatchMetadata', 'STATUS_MSGS']

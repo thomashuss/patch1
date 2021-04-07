@@ -1,6 +1,7 @@
 import configparser
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, Future
+from typing import NamedTuple
 from .data import *
 from .sorting import TAGS_NAMES
 from .common import *
@@ -19,6 +20,20 @@ DEFAULT_CONFIG = {
 TMP_FXP_NAME = '%s_tmp.%s' % (APP_NAME, FXP_FILE_EXT)
 TMP_PFILE_NAME = '%s.%s' % (PATCH_NUMS[0], PATCH_FILE_EXT)
 
+class PatchMetadata(NamedTuple):
+    index: int
+    name: str
+    bank: str
+    num: str
+    color: str
+    ver: str
+    tags: str
+
+    @classmethod
+    def from_patch(cls, patch):
+        """Constructs a new `PatchMetadata` object from the `patch`."""
+
+        return cls(patch.name, patch['patch_name'], patch['bank'], patch['num'], patch['color'], patch['ver'], tags_to_str(patch['tags']))
 
 class App:
     """Implements the program's controller."""
@@ -178,3 +193,5 @@ class App:
         self.quick_tmp.unlink(missing_ok=True)
 
         self._exe.shutdown()
+
+__all__ = ['App', 'PatchMetadata']

@@ -3,7 +3,6 @@ import pandas as pd
 import numpy as np
 import re
 import pickle
-from typing import NamedTuple
 from pathlib import Path
 from sklearn.pipeline import Pipeline
 from sklearn.neighbors import KNeighborsClassifier
@@ -28,23 +27,6 @@ INIT_PATCH = pd.Series(PARAM_VALS, index=PARAM_NAMES, dtype=int)
 
 # Columns of a dataframe containing patch metadeta.
 META_DF_COLS = ['bank', 'num', 'patch_name', 'color', 'ver', 'tags']
-
-
-class PatchMetadata(NamedTuple):
-    index: int
-    name: str
-    bank: str
-    num: str
-    color: str
-    ver: str
-    tags: str
-
-    @classmethod
-    def from_patch(cls, patch: pd.Series):
-        """Constructs a new `PatchMetadata` object from the `patch`."""
-
-        return cls(patch.name, patch['patch_name'], patch['bank'], patch['num'], patch['color'], patch['ver'], tags_to_str(patch['tags']))
-
 
 class PatchDatabase:
     """Model for a pandas-based patch database."""
@@ -155,24 +137,19 @@ class PatchDatabase:
         """Wrapper for functions that modify the active database."""
 
         def inner(self, *args, **kwargs):
+            ret = func(self, *args, **kwargs)
             self.modified_db = True
-            try:
-                return func(self, *args, **kwargs)
-            except BaseException as exc:
-                self.modified_db = False
-                raise exc
+            self.refresh()
+            return ret
         return inner
 
     def volatile_cls(func):
         """Wrapper for functions that modify the k-nearest neighbors classifier."""
 
         def inner(self, *args, **kwargs):
+            ret = func(self, *args, **kwargs)
             self.modified_cls = True
-            try:
-                return func(self, *args, **kwargs)
-            except BaseException as exc:
-                self.modified_cls = False
-                raise exc
+            return ret
         return inner
 
     @volatile_cls
@@ -209,7 +186,6 @@ class PatchDatabase:
             return encode_tags(tags, patch['tags'])
 
         self._df['tags'] = self._df.apply(classify, axis=1)
-        self.refresh()
 
     def find_patches_by_val(self, find: str, col: str, exact=False, regex=False) -> pd.DataFrame:
         """Finds metadata of patches in the database matching `find` value in column `col`, either as a substring (`exact=False`),
@@ -294,8 +270,15 @@ class PatchDatabase:
                                         if pattern.search(row[col])), row['tags'])
             self._df['tags'] = self._df.apply(apply, axis=1)
 
-            self.refresh()
+    @volatile_db
+    def change_tags(self, index: int, tags: list, replace: bool=True):
+        """Changes the tags of the patch at `index` to `tags`. If `replace` is `False`, `tags` will be added to the patch's existing tags."""
 
+        if replace:
+            old_tags = ''
+        else:
+            old_tags = self._df.iloc[index]['tags']
+        self._df.iloc[index]['tags'] = encode_tags(tags, old_tags)
 
 def tags_to_list(tags: str) -> list:
     """Returns the properly formatted (ragged) string of tags as a list."""
@@ -323,5 +306,5 @@ def encode_tags(tags: list, old_tags: str = '') -> str:
     return old_tags + _TAGS_SEP.join(tags)
 
 
-__all__ = ['PatchDatabase', 'PatchMetadata', 'tags_to_list', 'tags_to_str',
-           'encode_tags', 'FXP_CHUNK', 'FXP_PARAMS', 'PATCH_FILE']
+__all__ = ['PatchDatabase', 'tags_to_list', 'tags_to_str',
+           'FXP_CHUNK', 'FXP_PARAMS', 'PATCH_FILE']

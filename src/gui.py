@@ -3,9 +3,8 @@ from tkinter import ttk, messagebox, filedialog
 from traceback import print_exception
 from collections import namedtuple
 from random import choice
-from .data import PatchMetadata
 from .common import *
-from .app import App
+from .app import *
 from __main__ import DND_SUPPORT
 if DND_SUPPORT:
     from tkinterdnd2 import *

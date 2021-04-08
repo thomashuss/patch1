@@ -93,6 +93,10 @@ class App:
         """Define this. It should empty the user-facing list of patches."""
         pass
 
+    def search_done(self):
+        """Define this. It's called whenever a search is finished."""
+        pass
+
     def update_meta(self) -> list:
         """This should update the user-facing metadata list with the return value of the super function."""
 
@@ -115,7 +119,8 @@ class App:
                 self.last_query = q
                 self.status(STATUS_SEARCH)
                 func(self, q)
-                self.count_patches()
+                self.search_done()
+                self.unwait()
                 return True
             return False
         return inner

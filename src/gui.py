@@ -243,7 +243,7 @@ class AppGui(App, ttk.Frame):
             self.update_active_patch()
             self.patch_list.delete(*kids)
 
-    def count_patches(self):
+    def search_done(self):
         """Update the status text with the number of visible patches."""
 
         kids = self.patch_list.get_children()
@@ -263,7 +263,6 @@ class AppGui(App, ttk.Frame):
                                "I'm sorry Dave, I'm afraid I can't do that."))
 
         self.status_text.set(new_text)
-        self.unwait()
 
     def update_active_patch(self, _=None):
         """Updates the cache of the currently active patch."""

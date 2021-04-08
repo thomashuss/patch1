@@ -1,4 +1,10 @@
-# Install to a virtualenv!!
+# Install to a virtualenv. It'll make the resulting pyinstaller package way smaller.
+
 pandas >= 1.2.3
 sklearn >= 0.0
+
+# On Mac, installing tables under python 3.9 will fail.
+# To workaround this: brew install hdf5 c-blosc
+tables >= 3.6.1
+
 # Also be sure to install https://github.com/pmgagne/tkinterdnd2

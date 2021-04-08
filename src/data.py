@@ -18,6 +18,7 @@ _TAGS_SEP = '|'
 FXP_CHUNK = 'chunk'
 FXP_PARAMS = 'params'
 DB_FILE = 'db'
+DB_KEY = 'patches'
 CLS_FILE = 'cls'
 PATCH_FILE = PATCH_FILE_EXT
 JOBS = min(4, cpu_count())
@@ -100,7 +101,7 @@ class PatchDatabase:
         if not isinstance(path, Path):
             path = Path(path)
         try:
-            df = pd.read_parquet(path / DB_FILE)
+            df = pd.read_hdf(path / DB_FILE, DB_KEY)
             knn = None
             if (path / CLS_FILE).is_file():
                 with open(path / CLS_FILE, 'rb') as f:
@@ -121,7 +122,7 @@ class PatchDatabase:
             path = Path(path)
 
         if self.modified_db:
-            self._df.to_parquet(path / DB_FILE)
+            self._df.to_hdf(path / DB_FILE, DB_KEY, format='table')
         if self._knn is not None and self.modified_cls:
             with open(path / CLS_FILE, 'wb') as f:
                 pickle.dump(self._knn, f)

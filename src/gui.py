@@ -58,8 +58,6 @@ class AppGui(App, ttk.Frame):
     patch_list: ttk.Treeview  # Treeview of patches which match the search results
     kwd_entry: ttk.Entry  # Keyword search text box
 
-    info = messagebox.showinfo
-
     def __init__(self, master: tk.Tk):
         """Creates a new graphical instance of the program within the specified `Tk` instance."""
 
@@ -199,20 +197,25 @@ class AppGui(App, ttk.Frame):
         self.root.deiconify()
         super().__init__()
 
+    def info(self, msg: str, title='Info'):
+        """Displays an informational message to the user."""
+
+        messagebox.showinfo(title, msg)
+
     def err(self, msg: str):
         """Displays an error message to the user."""
 
-        self.status(STATUS_READY)
         messagebox.showerror('Error', msg)
 
     def exc(self, ex, val, tb):
         """Exception handler for Tkinter."""
 
         print_exception(ex, val, tb)
+        self.status(STATUS_READY)
         self.err(str(val))
 
     def busy_state(self, state):
-        """Updates all busy widgets to `state`."""
+        """Changes the state of the program to `state`."""
 
         for w in self.busy_wids:
             w.config(state=state)

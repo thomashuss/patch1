@@ -77,6 +77,14 @@ class App:
 
         self.put_patch(PatchMetadata.from_patch(patch))
 
+    def info(self, msg: str):
+        """Define this. It should display an informational message to the user."""
+        pass
+
+    def err(self, msg: str):
+        """Define this. It should display an error message to the user."""
+        pass
+
     def put_patch(self, patch: PatchMetadata):
         """Define this. It should add the `patch` to a list of patches visible to the user."""
         pass
@@ -181,7 +189,9 @@ class App:
         """Creates a model for identifying patches based on similarity."""
 
         self.status(STATUS_WAIT)
-        self._db.train_classifier()
+        acc = self._db.train_classifier()
+        self.info('The new model is estimated to be %f%% accurate. ' % (acc * 100) +
+                  'To improve its accuracy, manually tag some untagged patches and correct existing tags, then train the model again.')
         self.refresh()
 
     def status(self, msg):

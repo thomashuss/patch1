@@ -19,6 +19,7 @@ FXP_CHUNK = 'chunk'
 FXP_PARAMS = 'params'
 DB_FILE = 'db'
 DB_KEY = 'patches'
+TAGS_KEY = 'TAGS'
 CLS_FILE = 'cls'
 PATCH_FILE = PATCH_FILE_EXT
 JOBS = min(4, cpu_count())
@@ -42,13 +43,17 @@ class PatchDatabase:
     tags = []
     banks = []
 
-    def __init__(self, df: pd.DataFrame = None, classifier: Pipeline = None, new = False):
+    def __init__(self, df: pd.DataFrame = None, tags: pd.DataFrame = None, classifier: Pipeline = None, new = False):
         """Don't call this function directly."""
 
         if df is not None:
             self._df = df
             self.modified_db = new
-            self.refresh()
+
+            if tags is not None:
+                self.refresh(_tags_df=tags)
+            else:
+                self.refresh()
 
             if classifier is not None:
                 self._knn = classifier
@@ -90,7 +95,7 @@ class PatchDatabase:
             meta_df['ver'] = pd.Categorical(meta_df['ver'])
             meta_df['tags'] = ''
 
-            return cls(meta_df.join(param_df), new=True)
+            return cls(df=meta_df.join(param_df), new=True)
         except Exception as e:
             return e
 
@@ -100,20 +105,21 @@ class PatchDatabase:
 
         if not isinstance(path, Path):
             path = Path(path)
+        
+        store = pd.HDFStore(path / DB_FILE, mode='r')
+        df = store.get(DB_KEY)
+
         try:
-            df = pd.read_hdf(path / DB_FILE, DB_KEY)
-            knn = None
-            if (path / CLS_FILE).is_file():
-                with open(path / CLS_FILE, 'rb') as f:
-                    knn = pickle.load(f)
-            return cls(df, knn)
-        except Exception as e:
-            return e
+            tags = store.get(TAGS_KEY)
+        except KeyError:
+            tags = None
+        store.close()
 
-    def is_active(self) -> bool:
-        """Returns `True` if a database is loaded, `False` otherwise."""
-
-        return self._df is not None
+        knn = None
+        if (path / CLS_FILE).is_file():
+            with open(path / CLS_FILE, 'rb') as f:
+                knn = pickle.load(f)
+        return cls(df=df, tags=tags, classifier=knn)
 
     def to_disk(self, path: Path):
         """Saves the active database to the directory `path`."""
@@ -122,16 +128,28 @@ class PatchDatabase:
             path = Path(path)
 
         if self.modified_db:
-            self._df.to_hdf(path / DB_FILE, DB_KEY, format='table')
+            store = pd.HDFStore(path / DB_FILE, mode='w')
+            store.put(DB_KEY, self._df, format='table')
+            store.put(TAGS_KEY, self._tags)
+            store.close()
         if self._knn is not None and self.modified_cls:
             with open(path / CLS_FILE, 'wb') as f:
                 pickle.dump(self._knn, f)
 
-    def refresh(self):
+    def is_active(self) -> bool:
+        """Returns `True` if a database is loaded, `False` otherwise."""
+
+        return self._df is not None
+
+    def refresh(self, _tags_df: pd.DataFrame = None):
         """Rebuilds cached indexes for the active database."""
 
-        self._tags = self._df['tags'].str.get_dummies(_TAGS_SEP)
-        self.tags = self._tags.columns.to_list()
+        if _tags_df is None:
+            self._tags = self._df['tags'].str.get_dummies(_TAGS_SEP)
+            self.tags = self._tags.columns.to_list()
+        else:
+            self._tags = _tags_df
+            self.tags = self._tags.columns.to_list()
         self.banks = self.get_categories('bank')
 
     def volatile_db(func):

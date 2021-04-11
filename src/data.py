@@ -1,6 +1,6 @@
 import multiprocessing
-import pandas as pd
 import numpy as np
+import pandas as pd
 import re
 import pickle
 from pathlib import Path
@@ -19,7 +19,7 @@ FXP_CHUNK = 'chunk'
 FXP_PARAMS = 'params'
 DB_FILE = 'db'
 DB_KEY = 'patches'
-TAGS_KEY = 'TAGS'
+TAGS_KEY = 'tags'
 CLS_FILE = 'cls'
 PATCH_FILE = PATCH_FILE_EXT
 JOBS = min(4, cpu_count())

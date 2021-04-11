@@ -10,4 +10,5 @@ pyinstaller src/__main__.py \
     --hidden-import sklearn.neighbors._typedefs \
     --hidden-import sklearn.utils._weight_vector \
     --hidden-import tables \
-    --exclude-module sklearn.cluster
+    --exclude-module sklearn.cluster \
+    --exclude-module scipy.fft

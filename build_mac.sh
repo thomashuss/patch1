@@ -1,10 +1,11 @@
 #/bin/sh
 # Always build in a virtualenv!
+source venv/bin/activate
 pyinstaller src/__main__.py \
     --noconfirm \
     --name Patch1 \
     --windowed \
-    --upx-dir /usr/local/bin \
+    --noupx \
     --additional-hooks-dir=. \
     --hidden-import cmath \
     --hidden-import sklearn.neighbors._typedefs \

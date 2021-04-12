@@ -1,7 +1,7 @@
 """Regular expressions to be run against patch metadata for determining possible tags."""
 
 TAGS_NAMES = {
-    'Accordion': r'acc(ord(i|e)on|\b)',
+    'Accordion': r'acc(ord.on|\b)',
     'Acid': r'acid|303',
     'Acoustic': r'acoustic',
     'Air': r'\bair',
@@ -16,6 +16,7 @@ TAGS_NAMES = {
     'Clav': r'clav',
     'Crash & Sweep': r'crash|sweep',
     'Cymbal': r'crash|cym(bal)?|\bride|\brd\b',
+    'Drop': r'\bdrop',
     'Drum': r'dru?m|snar|tom|kic?k|taiko|timpani',
     'Flanger': r'flang',
     'FM': r'fm',
@@ -25,7 +26,7 @@ TAGS_NAMES = {
     'Harpsichord': r'harpsi',
     'Hat': r'(hi-?|\b)hat(s|z|\b)|(((closed|open).?)|(?=.*?cym).*)hi',
     'Horn': r'horn|trumpet|trombone',
-    'Keys': r'\b(key|ky)',
+    'Keys': r'\bke?y',
     'Kick': r'kic?k',
     'Lead': r'lead|\bld\b|le?a?d.?(]|:)',
     'Lo-fi': r'lo-?fi',
@@ -34,6 +35,7 @@ TAGS_NAMES = {
     'Pad': r'pa?d',
     'Percussion': r'pe?rc|tamb',
     'Piano': r'piano',
+    'Pizzicato': r'pizz(i|\b|.cato)',
     'Pluck': r'pl(u|c|uc)?k',
     'Poly': r'poly',
     'PWM': r'pwm',

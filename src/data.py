@@ -30,6 +30,7 @@ INIT_PATCH = pd.Series(PARAM_VALS, index=PARAM_NAMES, dtype=int)
 # Columns of a dataframe containing patch metadeta.
 META_DF_COLS = ['bank', 'num', 'patch_name', 'color', 'ver', 'tags']
 
+
 class PatchDatabase:
     """Model for a pandas-based patch database."""
 
@@ -43,7 +44,7 @@ class PatchDatabase:
     tags = []
     banks = []
 
-    def __init__(self, df: pd.DataFrame = None, tags: pd.DataFrame = None, classifier: Pipeline = None, new = False):
+    def __init__(self, df: pd.DataFrame = None, tags: pd.DataFrame = None, classifier: Pipeline = None, new=False):
         """Don't call this function directly."""
 
         if df is not None:
@@ -105,7 +106,7 @@ class PatchDatabase:
 
         if not isinstance(path, Path):
             path = Path(path)
-        
+
         store = pd.HDFStore(path / DB_FILE, mode='r')
         df = store.get(DB_KEY)
 
@@ -196,7 +197,8 @@ class PatchDatabase:
     def classify_tags(self):
         """Tags patches based on their parameters using the previously generated classifier model."""
 
-        assert isinstance(self._knn, Pipeline), 'Please create a classifier model first.'
+        assert isinstance(
+            self._knn, Pipeline), 'Please create a classifier model first.'
         predictions = self._knn.predict(self._df[PARAM_NAMES].to_numpy())
 
         def classify(patch: pd.Series) -> str:
@@ -280,17 +282,17 @@ class PatchDatabase:
         """Tags patches in the database, where the patch's `col` value matches a regular expression in `re_defs`, with the dictionary key
         of the matching expression."""
 
-        if self.is_active():
-            defs = {val: re.compile(re_str, flags=re.IGNORECASE)
-                    for val, re_str in re_defs.items()}
-
+        for tag, pattern in re_defs.items():
             def apply(row):
-                return encode_tags(list(val for val, pattern in defs.items()
-                                        if pattern.search(row[col])), row['tags'])
-            self._df['tags'] = self._df.apply(apply, axis=1)
+                return encode_tags(tag, row['tags'])
+
+            mask = self._df[col].str.contains(
+                pattern, regex=True, flags=re.IGNORECASE)
+            self._df.loc[mask, 'tags'] = self._df.loc[mask].apply(
+                apply, axis=1)
 
     @volatile_db
-    def change_tags(self, index: int, tags: list, replace: bool=True):
+    def change_tags(self, index: int, tags: list, replace: bool = True):
         """Changes the tags of the patch at `index` to `tags`. If `replace` is `False`, `tags` will be added to the patch's existing tags."""
 
         if replace:
@@ -298,6 +300,7 @@ class PatchDatabase:
         else:
             old_tags = self._df.iloc[index]['tags']
         self._df.iloc[index]['tags'] = encode_tags(tags, old_tags)
+
 
 def tags_to_list(tags: str) -> list:
     """Returns the properly formatted (ragged) string of tags as a list."""
@@ -311,11 +314,14 @@ def tags_to_str(tags: str, sep: str = ', ') -> str:
     return tags.replace(_TAGS_SEP, sep)
 
 
-def encode_tags(tags: list, old_tags: str = '') -> str:
+def encode_tags(tags, old_tags: str = '') -> str:
     """Adds `tags` to `old_tags`, which is either a pre-defined properly formatted string of tags or a blank
     string, and returns a properly formatted (ragged) string of tags. Only duplicates across `tags` and `old_tags`
     will be corrected, and it is assumed that neither parameter has its own duplicates, though nothing particularly
     bad will happen if there are."""
+
+    if isinstance(tags, str):
+        tags = [tags]
 
     if len(old_tags) > 0:
         old_tagsl = old_tags.split(_TAGS_SEP)

@@ -8,6 +8,7 @@ dist
 hook-*.py
 venv
 *.spec
+*.pyo
 
 # Nobody cares, Tim Cook.
 .DS_Store

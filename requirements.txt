@@ -3,8 +3,9 @@
 pandas >= 1.2.3
 sklearn >= 0.0
 
-# On Mac, installing tables under python 3.9 will fail.
-# To workaround this: brew install hdf5 c-blosc
+# Unfortunately, pytables doesn't have wheels for cp3.9 on Windows or Mac, and the build will probably fail.
+# On Windows, download an unofficial wheel from https://www.lfd.uci.edu/~gohlke/pythonlibs/#pytables
+# On Mac: brew install hdf5 c-blosc
 tables >= 3.6.1
 
 # Also be sure to install https://github.com/pmgagne/tkinterdnd2

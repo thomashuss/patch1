@@ -24,7 +24,7 @@ TREE_COLORS = (TreeColor('red', '#ff4d4f'), TreeColor('blue', '#5557fa'), TreeCo
                TreeColor('yellow', '#cbcb18'), TreeColor('magenta', '#ff54b5'), TreeColor('cyan', '#00b5b2'))
 
 # Listbox dimensions and color
-LB_KWARGS = {'width': 25, 'height': 30, 'selectbackground': '#d6be48'}
+LB_KWARGS = {'width': 25, 'height': 30, 'selectbackground': '#d6be48', 'activestyle': tk.NONE}
 
 # Common properties of open/save dialogs
 FILE_KWARGS = {'filetypes': (('All files', '*')), 'initialdir': str(DATA_DIR)}

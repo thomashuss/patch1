@@ -1,11 +1,12 @@
+import webbrowser
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 from traceback import print_exception
 from collections import namedtuple
-from random import choice
 from common import *
 from app import *
 from tkinterdnd2 import *
+from synth1 import Synth1
 
 TAGS_TAB = 'tags'
 BANKS_TAB = 'banks'
@@ -24,7 +25,8 @@ TREE_COLORS = (TreeColor('red', '#ff4d4f'), TreeColor('blue', '#5557fa'), TreeCo
                TreeColor('yellow', '#cbcb18'), TreeColor('magenta', '#ff54b5'), TreeColor('cyan', '#00b5b2'))
 
 # Listbox dimensions and color
-LB_KWARGS = {'width': 25, 'height': 30, 'selectbackground': '#d6be48', 'activestyle': tk.NONE}
+LB_KWARGS = {'width': 25, 'height': 30,
+             'selectbackground': '#d6be48', 'activestyle': tk.NONE}
 
 # Common properties of open/save dialogs
 FILE_KWARGS = {'filetypes': (('All files', '*')), 'initialdir': str(DATA_DIR)}
@@ -97,8 +99,8 @@ class AppGui(App, ttk.Frame):
         menubar.add_cascade(label='Edit', menu=edit)
 
         help = tk.Menu(menubar, tearoff=False)
-        help.add_command(label='About', command=lambda: messagebox.showinfo(
-            'About %s' % APP_NAME, '%s 0.0.1\nTame your %s patches' % (APP_NAME, SYNTH_NAME)))
+        help.add_command(label='%s Website' % APP_NAME,
+                         command=lambda: webbrowser.open(APP_WEBSITE, new=2))
 
         menubar.add_cascade(label='Help', menu=help)
         self.master.config(menu=menubar)
@@ -195,7 +197,7 @@ class AppGui(App, ttk.Frame):
         ############## END META PANE ##############
 
         self.root.deiconify()
-        super().__init__()
+        super().__init__(Synth1())
 
     def info(self, msg: str, title='Info'):
         """Displays an informational message to the user."""
@@ -258,12 +260,7 @@ class AppGui(App, ttk.Frame):
             # self.patch_list.focus_set()
             self.patch_list.see(kids[0])
         else:
-            new_text = choice(('No patches found.',
-                               'Better luck next time.',
-                               'I looked everywhere.',
-                               r'¯\_(ツ)_/¯',
-                               'No patch for you.',
-                               "I'm sorry Dave, I'm afraid I can't do that."))
+            new_text = 'No patches found.'
 
         self.status_text.set(new_text)
 
@@ -346,7 +343,7 @@ class AppGui(App, ttk.Frame):
         """Prompts the user to select a directory containing patch banks and then imports that directory."""
 
         dir = filedialog.askdirectory(
-            title='Select the folder containing your %s banks:' % SYNTH_NAME, initialdir=FILE_KWARGS['initialdir'])
+            title='Select the folder containing your banks:', initialdir=FILE_KWARGS['initialdir'])
         if len(dir) != 0:
             super().new_database(dir)
 

@@ -5,6 +5,7 @@ from typing import NamedTuple
 from data import *
 from sorting import TAGS_NAMES
 from common import *
+from patches import PatchSchema
 
 CONFIG_FILE = DATA_DIR / 'config.ini'
 DEFAULT_CONFIG = {
@@ -17,8 +18,7 @@ DEFAULT_CONFIG = {
         'export_to': Path.home()
     }
 }
-TMP_FXP_NAME = '%s_tmp.%s' % (APP_NAME, FXP_FILE_EXT)
-TMP_PFILE_NAME = '%s.%s' % (PATCH_NUMS[0], PATCH_FILE_EXT)
+TMP_FXP_NAME = '%s_tmp.%s' % (APP_NAME_INLINE, FXP_FILE_EXT)
 
 STATUS_MSGS = {
     STATUS_READY: 'Ready.',
@@ -35,16 +35,14 @@ class PatchMetadata(NamedTuple):
     index: int
     name: str
     bank: str
-    num: str
     color: str
-    ver: str
     tags: str
 
     @classmethod
     def from_patch(cls, patch):
         """Constructs a new `PatchMetadata` object from the `patch`."""
 
-        return cls(patch.name, patch['patch_name'], patch['bank'], patch['num'], patch['color'], patch['ver'], tags_to_str(patch['tags']))
+        return cls(patch.name, patch['patch_name'], patch['bank'], patch['color'], tags_to_str(patch['tags']))
 
 
 class App:
@@ -53,6 +51,7 @@ class App:
     _db: PatchDatabase  # The active patch database
     _config: configparser.ConfigParser
     _exe: ThreadPoolExecutor  # When a task needs to run in the background
+    schema: PatchSchema
 
     quick_tmp: Path  # Temporary file for quick export
     active_patch: int = -1  # Index in db of currently active patch
@@ -61,11 +60,13 @@ class App:
     tags = []  # tag indexes for active database
     banks = []  # bank indexes for active database
 
-    def __init__(self):
+    def __init__(self, schema: PatchSchema):
         """Creates a new instance of the program."""
 
         self.status(STATUS_OPEN)
 
+        self.schema = schema
+        self._db = PatchDatabase(self.schema)
         self._exe = ThreadPoolExecutor(max_workers=1)
         self._config = configparser.ConfigParser()
 
@@ -112,9 +113,8 @@ class App:
             patch = self.by_index(self.active_patch)
             return [
                 'Name:', patch.name, '',
-                'Bank:', '%s (#%s)' % (patch.bank, patch.num), '',
-                'Tags:', patch.tags, '',
-                '%s version:' % SYNTH_NAME, patch.ver
+                'Bank:', patch.bank, '',
+                'Tags:', patch.tags, ''
             ]
         else:
             return []
@@ -159,18 +159,6 @@ class App:
         self.banks = self._db.banks
         self.status(STATUS_READY)
 
-    def reload(self, result):
-        """Replaces the active database instance."""
-
-        if isinstance(result, Future):  # unused atm
-            result = result.result()
-        if isinstance(result, Exception):
-            raise Exception(
-                'There was an error loading the database:\n%s' % result)
-
-        self._db = result
-        self.refresh()
-
     def tag_names(self):
         """Tags patches based on their names."""
 
@@ -207,7 +195,8 @@ class App:
         """Creates a new database with patches from `dir`."""
 
         self.status(STATUS_IMPORT)
-        self.reload(PatchDatabase.bootstrap(Path(dir)))
+        self._db.bootstrap(Path(dir))
+        self.refresh()
 
     def open_database(self, path, silent=False):
         """Loads a previously saved database."""
@@ -217,14 +206,10 @@ class App:
 
         if path.is_dir():
             try:
-                self.reload(PatchDatabase.from_disk(path))
+                self._db.from_disk(path)
             except:
                 if not silent:
                     raise Exception('That is not a valid data folder.')
-                else:
-                    self._db = PatchDatabase()
-        else:
-            self._db = PatchDatabase()
 
     def save_database(self, path):
         """Saves the active database to disk."""
@@ -243,7 +228,8 @@ class App:
             CONFIG_FILE.touch()
 
         if self._config.get('synth_interface', 'quick_export_as') == PATCH_FILE:
-            self.quick_tmp = Path(DATA_DIR / TMP_PFILE_NAME).resolve()
+            self.quick_tmp = Path(
+                DATA_DIR / '%s.%s' % (self.schema.file_base, self.schema.file_ext)).resolve()
         else:
             self.quick_tmp = Path(DATA_DIR / TMP_FXP_NAME).resolve()
         self.quick_tmp.touch(exist_ok=True)
@@ -268,7 +254,7 @@ class App:
                                                                      'quick_export_as'), self.quick_tmp)
         return str(self.quick_tmp)
 
-    def by_index(self, ind: int):
+    def by_index(self, ind: int) -> PatchMetadata:
         """Returns the patch at index `ind`."""
 
         return PatchMetadata.from_patch(self._db.get_patch_by_index(ind))

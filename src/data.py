@@ -9,9 +9,8 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from os import cpu_count
-from patchfiles import write_patchfile, read_patchfile
 from common import *
-from sy2fxpreset import *
+from patches import PatchSchema, META_COLS
 from preset2fxp import *
 
 _TAGS_SEP = '|'
@@ -21,22 +20,19 @@ DB_FILE = 'db'
 DB_KEY = 'patches'
 TAGS_KEY = 'tags'
 CLS_FILE = 'cls'
-PATCH_FILE = PATCH_FILE_EXT
+PATCH_FILE = 'patch'
 JOBS = min(4, cpu_count())
 
-# Create a series with all default values for filling in sparsely defined patches.
-INIT_PATCH = pd.Series(PARAM_VALS, index=PARAM_NAMES, dtype=int)
-
 # Columns of a dataframe containing patch metadeta.
-META_DF_COLS = ['bank', 'num', 'patch_name', 'color', 'ver', 'tags']
 
 
 class PatchDatabase:
-    """Model for a pandas-based patch database."""
+    """Model for a pandas-based patch database conforming to a `PatchSchema`."""
 
     _df: pd.DataFrame = None
     _tags: pd.DataFrame
     _knn: Pipeline = None
+    schema: PatchSchema
 
     modified_db = False
     modified_cls = False
@@ -44,83 +40,83 @@ class PatchDatabase:
     tags = []
     banks = []
 
-    def __init__(self, df: pd.DataFrame = None, tags: pd.DataFrame = None, classifier: Pipeline = None, new=False):
-        """Don't call this function directly."""
+    def __init__(self, schema: PatchSchema):
+        """Constructs a new `PatchDatabase` instance following the `schema`."""
 
-        if df is not None:
-            self._df = df
-            self.modified_db = new
+        self.schema = schema
 
-            if tags is not None:
-                self.refresh(_tags_df=tags)
-            else:
-                self.refresh()
+    def volatile_db(func):
+        """Wrapper for functions that modify the active database."""
 
-            if classifier is not None:
-                self._knn = classifier
+        def inner(self, *args, **kwargs):
+            ret = func(self, *args, **kwargs)
+            self.modified_db = True
+            self.refresh()
+            return ret
+        return inner
 
-    @classmethod
-    def bootstrap(cls, root_dir: Path):
-        """Creates a new database from the contents of the specified directory and returns a new `PatchDatabase`
-        with the database loaded."""
+    def volatile_cls(func):
+        """Wrapper for functions that modify the k-nearest neighbors classifier."""
 
-        try:
-            meta = []
-            params = []
+        def inner(self, *args, **kwargs):
+            ret = func(self, *args, **kwargs)
+            self.modified_cls = True
+            return ret
+        return inner
 
-            # Syntax of a patch file name.
-            re_file = re.compile(r'^[0-9]{3}\.%s$' % PATCH_FILE_EXT)
+    @volatile_db
+    def bootstrap(self, root_dir: Path):
+        """Creates a new database from the contents of the specified directory and loads the database."""
 
-            # Regex is used on the file names, as opposed to globbing for file ext, to weed out
-            # any hidden files or other garbage (*cough* macOS).
-            files = filter(lambda f: re_file.match(f.name)
-                           != None, root_dir.glob('**/*'))
+        re_file = re.compile(self.schema.file_pattern)
+        files = filter(lambda f: re_file.match(f.name)
+                       != None, root_dir.glob('**/*'))
 
-            # Running *all* this I/O on a single thread is just so slow...
-            with multiprocessing.Pool(processes=JOBS) as pool:
-                # Don't care about the order yet, they'll be sorted later.
-                for patch in pool.imap_unordered(read_patchfile, files):
-                    meta.append(patch[0])
-                    params.append(patch[1])
+        meta = []
+        params = []
+        # Running *all* this I/O on a single thread is just so slow...
+        with multiprocessing.Pool(processes=JOBS) as pool:
+            for patch in pool.imap_unordered(self.schema.read_patchfile, files):
+                if patch:
+                    params.append(patch['params'])
+                    del patch['params']
+                    meta.append(patch)
 
-            meta_df = pd.DataFrame(meta, columns=META_DF_COLS[:-1])  # no tags
-            param_df = pd.DataFrame(params, columns=PARAM_NAMES,
-                                    dtype=int).fillna(INIT_PATCH)
+        init_patch = pd.Series(
+            self.schema.values, index=self.schema.params, dtype=self.schema.param_dtype)
 
-            meta_df['bank'] = pd.Categorical(meta_df['bank'])
-            meta_df['num'] = pd.Categorical(
-                meta_df['num'], categories=PATCH_NUMS)
-            meta_df.sort_values('patch_name')
-            meta_df['color'] = pd.Categorical(
-                meta_df['color'], categories=COLORS)
-            meta_df['ver'] = pd.Categorical(meta_df['ver'])
-            meta_df['tags'] = ''
+        meta_df = pd.DataFrame(meta)
+        param_df = pd.DataFrame(params, columns=self.schema.params,
+                                dtype=int).fillna(init_patch)
 
-            return cls(df=meta_df.join(param_df), new=True)
-        except Exception as e:
-            return e
+        meta_df['bank'] = pd.Categorical(meta_df['bank'])
+        meta_df['tags'] = ''
 
-    @classmethod
-    def from_disk(cls, path: Path):
-        """Creates a new `PatchDatabase` instance after loading a database from the directory `path`."""
+        for col, pos in self.schema.possibilites.items():
+            meta_df[col] = pd.Categorical(meta_df[col], categories=pos)
+
+        self._df = meta_df.join(param_df)
+
+    def from_disk(self, path: Path):
+        """Loads a database from the directory `path`."""
 
         if not isinstance(path, Path):
             path = Path(path)
 
         store = pd.HDFStore(path / DB_FILE, mode='r')
-        df = store.get(DB_KEY)
+        self._df = store.get(DB_KEY)
 
         try:
-            tags = store.get(TAGS_KEY)
+            self._tags = store.get(TAGS_KEY)
         except KeyError:
-            tags = None
+            pass
         store.close()
 
-        knn = None
         if (path / CLS_FILE).is_file():
             with open(path / CLS_FILE, 'rb') as f:
-                knn = pickle.load(f)
-        return cls(df=df, tags=tags, classifier=knn)
+                self._knn = pickle.load(f)
+
+        self.refresh()
 
     def to_disk(self, path: Path):
         """Saves the active database to the directory `path`."""
@@ -153,25 +149,6 @@ class PatchDatabase:
             self.tags = self._tags.columns.to_list()
         self.banks = self.get_categories('bank')
 
-    def volatile_db(func):
-        """Wrapper for functions that modify the active database."""
-
-        def inner(self, *args, **kwargs):
-            ret = func(self, *args, **kwargs)
-            self.modified_db = True
-            self.refresh()
-            return ret
-        return inner
-
-    def volatile_cls(func):
-        """Wrapper for functions that modify the k-nearest neighbors classifier."""
-
-        def inner(self, *args, **kwargs):
-            ret = func(self, *args, **kwargs)
-            self.modified_cls = True
-            return ret
-        return inner
-
     @volatile_cls
     def train_classifier(self) -> float:
         """Constructs a k-nearest neighbors classifier for patches based on their parameters.
@@ -181,7 +158,7 @@ class PatchDatabase:
         df = self._df.loc[tagged_mask]
         if len(df) == 0:
             raise Exception('Add some tags and try again.')
-        df_slice = df[PARAM_NAMES]
+        df_slice = df[self.schema.params]
 
         indicators = self._tags[tagged_mask]
         X = df_slice.to_numpy()
@@ -199,7 +176,8 @@ class PatchDatabase:
 
         assert isinstance(
             self._knn, Pipeline), 'Please create a classifier model first.'
-        predictions = self._knn.predict(self._df[PARAM_NAMES].to_numpy())
+        predictions = self._knn.predict(
+            self._df[self.schema.params].to_numpy())
 
         def classify(patch: pd.Series) -> str:
             prediction = predictions[int(patch.name)]
@@ -209,7 +187,7 @@ class PatchDatabase:
         self._df['tags'] = self._df.apply(classify, axis=1)
 
     def find_patches_by_val(self, find: str, col: str, exact=False, regex=False) -> pd.DataFrame:
-        """Finds metadata of patches in the database matching `find` value in column `col`, either as a substring (`exact=False`),
+        """Finds patches in the database matching `find` value in column `col`, either as a substring (`exact=False`),
         an exact match (`exact=True`), or a regular expression (`regex=True`). Returns a
         sliced `DataFrame`."""
 
@@ -218,14 +196,14 @@ class PatchDatabase:
         else:
             mask = self._df[col].str.contains(find, case=False, regex=regex)
 
-        return self._df.loc[mask][META_DF_COLS]
+        return self._df.loc[mask]
 
     def find_patches_by_tags(self, tags: list) -> pd.DataFrame:
-        """Finds metadata of patches in the database tagged with (at least) each specified tag. Returns a sliced `DataFrame`."""
+        """Finds patches in the database tagged with (at least) each specified tag. Returns a sliced `DataFrame`."""
 
         # create masks for each tag, unpack into list, take logical and,
         # reduce into single mask, return slice of dataframe with that mask
-        return self._df.loc[np.logical_and.reduce([*(self._tags[tag] == 1 for tag in tags)])][META_DF_COLS]
+        return self._df.loc[np.logical_and.reduce([*(self._tags[tag] == 1 for tag in tags)])]
 
     def keyword_search(self, kwd: str) -> pd.DataFrame:
         """Finds metadata of patches in the database whose name matches the specified keyword query. Returns a
@@ -255,22 +233,23 @@ class PatchDatabase:
         if path.is_dir():
             # If given a dir rather than a file, auto name the file
             if typ == PATCH_FILE:
-                fname = (patch['num'], PATCH_FILE_EXT)
+                fname = (self.schema.file_base, self.schema.file_ext)
             else:
+                # regex sub to remove any unwanted characters from the file name.
                 fname = (re.sub(r'\W+', '', patch['patch_name']), FXP_FILE_EXT)
             path /= ('%s.%s' % fname)
 
         if typ == PATCH_FILE:
-            write_patchfile(patch, path)
+            self.schema.write_patchfile(patch, path)
         else:
-            params = patch[PARAM_NAMES].to_numpy(dtype=int)
-            kwargs = {'plugin_id': VST_ID, 'plugin_version': None,
-                      'label': patch['patch_name'], 'num_params': NUM_PARAMS}
+            kwargs = {'plugin_id': self.schema.vst_id, 'plugin_version': None,
+                      'label': patch['patch_name'], 'num_params': self.schema.num_params}
             if typ == FXP_PARAMS:
-                preset = Preset(params=make_fxp_params(params), **kwargs)
+                preset = Preset(params=self.schema.make_fxp_params(
+                    patch[self.schema.params].to_numpy(dtype=int)), **kwargs)
             elif typ == FXP_CHUNK:
-                preset = ChunkPreset(chunk=make_fxp_chunk(
-                    params, int(patch['ver'])), **kwargs)
+                preset = ChunkPreset(chunk=self.schema.make_fxp_chunk(
+                    patch), **kwargs)
             else:
                 raise ValueError(
                     'Cannot write a patch to a file type of %s' % typ)

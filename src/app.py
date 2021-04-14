@@ -133,6 +133,15 @@ class App:
             return False
         return inner
 
+    def reloads(func):
+        """Wrapper for functions that require a reload of the view."""
+
+        def inner(self, *args, **kwargs):
+            ret = func(self, *args, **kwargs)
+            self.refresh()
+            return ret
+        return inner
+
     @searcher
     def search_by_tags(self, tags: list):
         """Searches for patches matching `tags`."""
@@ -159,20 +168,21 @@ class App:
         self.banks = self._db.banks
         self.status(STATUS_READY)
 
+    @reloads
     def tag_names(self):
         """Tags patches based on their names."""
 
         self.status(STATUS_NAME_TAG)
         self._db.tags_from_val_defs(TAGS_NAMES, 'patch_name')
-        self.refresh()
 
+    @reloads
     def tag_similar(self):
         """Tags patches based on their similarity to other patches."""
 
         self.status(STATUS_SIM_TAG)
         self._db.classify_tags()
-        self.refresh()
 
+    @reloads
     def create_model(self):
         """Creates a model for identifying patches based on similarity."""
 
@@ -180,7 +190,6 @@ class App:
         acc = self._db.train_classifier()
         self.info('The new model is estimated to be %f%% accurate. ' % (acc * 100) +
                   'To improve its accuracy, manually tag some untagged patches and correct existing tags, then train the model again.')
-        self.refresh()
 
     def status(self, msg):
         """Fully implement this function by updating a user-facing status indicator before calling the super."""
@@ -191,13 +200,14 @@ class App:
             self.empty_patches()
             self.wait()
 
+    @reloads
     def new_database(self, dir):
         """Creates a new database with patches from `dir`."""
 
         self.status(STATUS_IMPORT)
         self._db.bootstrap(Path(dir))
-        self.refresh()
 
+    @reloads
     def open_database(self, path, silent=False):
         """Loads a previously saved database."""
 

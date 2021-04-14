@@ -6,6 +6,7 @@ from collections import namedtuple
 from common import *
 from app import *
 from tkinterdnd2 import *
+from patches import PatchSchema
 from synth1 import Synth1
 
 TAGS_TAB = 'tags'
@@ -60,10 +61,13 @@ class AppGui(App, ttk.Frame):
     patch_list: ttk.Treeview  # Treeview of patches which match the search results
     kwd_entry: ttk.Entry  # Keyword search text box
 
+    schema: PatchSchema
+
     def __init__(self, master: tk.Tk):
         """Creates a new graphical instance of the program within the specified `Tk` instance."""
 
         ttk.Frame.__init__(self, master)
+        self.schema = Synth1()
         self.pack()
         self.root = self.master.winfo_toplevel()
 
@@ -77,7 +81,7 @@ class AppGui(App, ttk.Frame):
 
         paned_win = tk.PanedWindow(orient=tk.HORIZONTAL)
         paned_win.pack(fill=tk.BOTH, expand=True)
-        self.root.title(APP_NAME)
+        self.root.title('%s - %s' % (self.schema.synth_name, APP_NAME))
 
         menubar = tk.Menu(self.master)
         file = tk.Menu(menubar, tearoff=False)
@@ -197,7 +201,7 @@ class AppGui(App, ttk.Frame):
         ############## END META PANE ##############
 
         self.root.deiconify()
-        super().__init__(Synth1())
+        super().__init__(self.schema)
 
     def info(self, msg: str, title='Info'):
         """Displays an informational message to the user."""
@@ -350,6 +354,7 @@ class AppGui(App, ttk.Frame):
     def end(self):
         """Closes the program."""
 
+        self.root.withdraw()
         super().end()
         self.master.destroy()
 

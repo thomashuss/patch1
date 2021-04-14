@@ -67,7 +67,7 @@ class Synth1(PatchSchema):
     file_param = '{index},{value}'
     param_delimiter = '\n'
 
-    def sanity_check(self, file: str) -> str:  # TODO insert instead of replace in array
+    def sanity_check(self, file: str) -> str:
         lst = file.split('\n')
 
         if len(lst) >= 4:

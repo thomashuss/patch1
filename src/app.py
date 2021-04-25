@@ -1,6 +1,6 @@
 import configparser
+import threading
 from pathlib import Path
-from concurrent.futures import ThreadPoolExecutor
 from typing import NamedTuple
 from data import *
 from sorting import TAGS_NAMES
@@ -52,7 +52,6 @@ class App:
 
     _db: PatchDatabase  # The active patch database
     _config: configparser.ConfigParser
-    _exe: ThreadPoolExecutor  # When a task needs to run in the background
     schema: PatchSchema
 
     quick_tmp: Path  # Temporary file for quick export
@@ -69,7 +68,6 @@ class App:
 
         self.schema = schema
         self._db = PatchDatabase(self.schema)
-        self._exe = ThreadPoolExecutor(max_workers=1)
         self._config = configparser.ConfigParser()
 
         self.load_config()
@@ -255,10 +253,16 @@ class App:
             self._db.write_patch(ind, typ, path)
 
     def quick_export(self, ind: int) -> str:
-        """Asynchronously exports the patch at index `ind` using quick settings."""
+        """Asynchronously exports the patch at index `ind` using quick settings. Returns the path to the exported patch."""
 
-        self._exe.submit(self._db.write_patch, ind, self._config.get('synth_interface',
-                                                                     'quick_export_as'), self.quick_tmp)
+        # Quick export is threaded because we expect the client app to be able to show instant feedback to the user,
+        # and exporting isn't always instant.
+        def export_thread(lock, *args):
+            with lock:
+                self._db.write_patch(*args)
+
+        thread = threading.Thread(target=export_thread, args=(threading.Lock(), ind, self._config.get('synth_interface', 'quick_export_as'), self.quick_tmp))
+        thread.start()
         return str(self.quick_tmp)
 
     def by_index(self, ind: int) -> PatchMetadata:
@@ -275,8 +279,6 @@ class App:
         with open(CONFIG_FILE, 'w') as cfile:
             self._config.write(cfile)
         self.quick_tmp.unlink(missing_ok=True)
-
-        self._exe.shutdown()
 
 
 __all__ = ['App', 'PatchMetadata', 'STATUS_MSGS']

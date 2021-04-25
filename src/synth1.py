@@ -85,21 +85,11 @@ class Synth1(PatchSchema):
     def make_fxp_chunk(self, patch: Series) -> bytes:
         """Generates Synth1 chunk data from a patch."""
 
-        ver = patch['ver']
-        params = patch[self.params]
+        ver = int(patch['ver'])
+        params = patch[self.params].to_numpy(dtype=int)
 
-        if not isinstance(params, np.ndarray):
-            if isinstance(params, Sequence):
-                # Cast params to ndarray if it isn't already.
-                params = np.array(params)
-            else:
-                raise TypeError(
-                    'Expected a Sequence or numpy.ndarray, got %s' % type(params))
         if len(params) != 99:
             raise ValueError('Expected 99 parameters, got %i' % len(params))
-        if params.dtype != np.dtype(int):
-            raise TypeError(
-                'Expected parameters as integers, got %s' % params.dtype)
 
         # Ignore the non-conforming parameters
         parms = np.delete(params, tuple(self.params.index(s)

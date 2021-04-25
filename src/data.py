@@ -2,15 +2,10 @@ import multiprocessing
 import numpy as np
 import pandas as pd
 import re
-import pickle
 from pathlib import Path
-from sklearn.pipeline import Pipeline
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split
 from os import cpu_count
 from common import *
-from patches import PatchSchema, META_COLS
+from patches import PatchSchema
 from preset2fxp import *
 
 _TAGS_SEP = '|'
@@ -19,11 +14,8 @@ FXP_PARAMS = 'params'
 DB_FILE = 'db'
 DB_KEY = 'patches'
 TAGS_KEY = 'tags'
-CLS_FILE = 'cls'
 PATCH_FILE = 'patch'
 JOBS = min(4, cpu_count())
-
-# Columns of a dataframe containing patch metadeta.
 
 
 class PatchDatabase:
@@ -31,7 +23,7 @@ class PatchDatabase:
 
     _df: pd.DataFrame = None
     _tags: pd.DataFrame
-    _knn: Pipeline = None
+    _knn = None
     schema: PatchSchema
 
     modified_db = False
@@ -52,15 +44,6 @@ class PatchDatabase:
             ret = func(self, *args, **kwargs)
             self.modified_db = True
             self.refresh()
-            return ret
-        return inner
-
-    def volatile_cls(func):
-        """Wrapper for functions that modify the k-nearest neighbors classifier."""
-
-        def inner(self, *args, **kwargs):
-            ret = func(self, *args, **kwargs)
-            self.modified_cls = True
             return ret
         return inner
 
@@ -112,10 +95,6 @@ class PatchDatabase:
             pass
         store.close()
 
-        if (path / CLS_FILE).is_file():
-            with open(path / CLS_FILE, 'rb') as f:
-                self._knn = pickle.load(f)
-
         self.refresh()
 
     def to_disk(self, path: Path):
@@ -129,9 +108,6 @@ class PatchDatabase:
             store.put(DB_KEY, self._df, format='table')
             store.put(TAGS_KEY, self._tags)
             store.close()
-        if self._knn is not None and self.modified_cls:
-            with open(path / CLS_FILE, 'wb') as f:
-                pickle.dump(self._knn, f)
 
     def is_active(self) -> bool:
         """Returns `True` if a database is loaded, `False` otherwise."""
@@ -149,10 +125,14 @@ class PatchDatabase:
             self.tags = self._tags.columns.to_list()
         self.banks = self.get_categories('bank')
 
-    @volatile_cls
     def train_classifier(self) -> float:
-        """Constructs a k-nearest neighbors classifier for patches based on their parameters.
+        """Constructs a k-nearest neighbors classifier for patches based on their parameters. The classifier is not intended to persist across sessions.
         Returns the accuracy of the classifier."""
+
+        from sklearn.pipeline import Pipeline
+        from sklearn.neighbors import KNeighborsClassifier
+        from sklearn.preprocessing import StandardScaler
+        from sklearn.model_selection import train_test_split
 
         tagged_mask = self._df['tags'] != ''
         df = self._df.loc[tagged_mask]
@@ -174,8 +154,7 @@ class PatchDatabase:
     def classify_tags(self):
         """Tags patches based on their parameters using the previously generated classifier model."""
 
-        assert isinstance(
-            self._knn, Pipeline), 'Please create a classifier model first.'
+        assert self._knn is not None, 'Please create a classifier model first.'
         predictions = self._knn.predict(
             self._df[self.schema.params].to_numpy())
 

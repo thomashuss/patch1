@@ -69,6 +69,7 @@ class AppGui(App, ttk.Frame):
         self.root = self.master.winfo_toplevel()
 
         self.root.withdraw()
+        self.root.geometry('900x500')
         self.root.protocol('WM_DELETE_WINDOW', self.end)
         self.root.report_callback_exception = self.exc
 
@@ -94,8 +95,6 @@ class AppGui(App, ttk.Frame):
         edit.add_command(label='Run parameter-based tagging...',
                          command=self.tag_similar)
         edit.add_separator()
-        edit.add_command(label='(Re-)train model...',
-                         command=self.create_model)
         edit.add_command(label='Settings')
         menubar.add_cascade(label='Edit', menu=edit)
 
@@ -224,6 +223,12 @@ class AppGui(App, ttk.Frame):
         for w in self.busy_wids:
             w.config(state=state)
 
+    def clear_selection(self):
+        """Clears all currently selected items in the search pane."""
+
+        for lb in (self.tags_lb, self.banks_lb):
+            lb.selection_clear(0, tk.END)
+
     def wait(self):
         """Informs the user that the program is busy."""
 
@@ -292,6 +297,7 @@ class AppGui(App, ttk.Frame):
         """Refreshes the GUI to reflect new cached data."""
 
         super().refresh()
+        self.clear_selection()
         self.tags_list.set(self.tags)
         self.banks_list.set(self.banks)
 
@@ -326,6 +332,7 @@ class AppGui(App, ttk.Frame):
     def search_by_kwd(self):
         """Searches for patches matching the query currently entered in the keyword `Entry`."""
 
+        self.clear_selection()
         super().keyword_search(self.kwd_entry.get().strip())
 
     def status(self, msg):

@@ -1,6 +1,6 @@
 import configparser
 from pathlib import Path
-from concurrent.futures import ThreadPoolExecutor, Future
+from concurrent.futures import ThreadPoolExecutor
 from typing import NamedTuple
 from data import *
 from sorting import TAGS_NAMES
@@ -33,7 +33,7 @@ STATUS_MSGS = {
 
 class PatchMetadata(NamedTuple):
     """Abstract metadata for a single patch."""
-    
+
     index: int
     name: str
     bank: str
@@ -181,17 +181,12 @@ class App:
     def tag_similar(self):
         """Tags patches based on their similarity to other patches."""
 
-        self.status(STATUS_SIM_TAG)
-        self._db.classify_tags()
-
-    @reloads
-    def create_model(self):
-        """Creates a model for identifying patches based on similarity."""
-
         self.status(STATUS_WAIT)
         acc = self._db.train_classifier()
-        self.info('The new model is estimated to be %f%% accurate. ' % (acc * 100) +
-                  'To improve its accuracy, manually tag some untagged patches and correct existing tags, then train the model again.')
+        self.info('Based on your current tags, this tagging method is estimated to be %f%% accurate. ' % (acc * 100) +
+                  'To improve its accuracy, manually tag some untagged patches and correct existing tags, then run this again.')
+        self.status(STATUS_SIM_TAG)
+        self._db.classify_tags()
 
     def status(self, msg):
         """Fully implement this function by updating a user-facing status indicator before calling the super."""

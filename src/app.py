@@ -32,6 +32,8 @@ STATUS_MSGS = {
 
 
 class PatchMetadata(NamedTuple):
+    """Abstract metadata for a single patch."""
+    
     index: int
     name: str
     bank: str

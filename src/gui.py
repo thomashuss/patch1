@@ -9,14 +9,11 @@ from tkinterdnd2 import *
 from patches import PatchSchema
 from synth1 import Synth1
 
-TAGS_TAB = 'tags'
-BANKS_TAB = 'banks'
-MISC_SRCH_TAB = 'search'
 INFO_TAB = 'info'
 MISC_META_TAB = 'meta'
 
-# Arguments for packing ttk notebooks and *most* widgets inside of them.
-TABS_PACKWARGS = {'fill': tk.BOTH, 'side': tk.LEFT,
+# Arguments for packing panedwindow panes and *most* widgets inside of them.
+PANE_PACKWARGS = {'fill': tk.BOTH, 'side': tk.LEFT,
                   'expand': True, 'anchor': tk.W}
 
 # For coloring ttk treeview entries with the patch's color
@@ -25,9 +22,9 @@ TreeColor = namedtuple('TreeColor', ('tagname', 'foreground'))
 TREE_COLORS = (TreeColor('red', '#ff4d4f'), TreeColor('blue', '#5557fa'), TreeColor('green', '#10b526'),
                TreeColor('yellow', '#cbcb18'), TreeColor('magenta', '#ff54b5'), TreeColor('cyan', '#00b5b2'))
 
-# Listbox dimensions and color
-LB_KWARGS = {'width': 25, 'height': 30,
-             'selectbackground': '#d6be48', 'activestyle': tk.NONE}
+# Common properties for listboxes
+LB_KWARGS = {'selectbackground': '#d6be48',
+             'activestyle': tk.NONE, 'width': 30}
 
 # Common properties of open/save dialogs
 FILE_KWARGS = {'filetypes': (('All files', '*')), 'initialdir': str(DATA_DIR)}
@@ -51,13 +48,13 @@ def scrollbars(master, box, drawX=True, drawY=True):
 class AppGui(App, ttk.Frame):
     """Graphical implementation of the `App`."""
 
-    # List containing all widgets with the ability to change the program's state from idle->busy or vice versa
+    # List containing all widgets with the ability to change the GUI's state from idle->busy or vice versa
     busy_wids = []
 
     status_text: tk.StringVar  # Text of the status label on the bottom
-    banks_list: tk.StringVar  # List which propogates the banks listbox
-    tags_list: tk.StringVar  # List which propogates the tags listbox
-    info_list: tk.StringVar  # List which propogates the patch info listbox
+    banks_list: tk.StringVar  # List which populates the banks listbox
+    tags_list: tk.StringVar  # List which populates the tag selection listbox
+    info_list: tk.StringVar  # List which populates the patch info listbox
     patch_list: ttk.Treeview  # Treeview of patches which match the search results
     kwd_entry: ttk.Entry  # Keyword search text box
 
@@ -111,55 +108,56 @@ class AppGui(App, ttk.Frame):
 
         ############## BEGIN SEARCH PANE ##############
 
-        self.search_pane = ttk.Notebook(self.master)
-        self.search_pane.pack(**TABS_PACKWARGS)
+        self.search_pane = ttk.Frame(self.master)
+        self.search_pane.pack(**PANE_PACKWARGS)
         paned_win.add(self.search_pane, stretch='never')
+        self.search_pane.columnconfigure(0, weight=1)
 
-        tags_tab = ttk.Frame(self.search_pane, name=TAGS_TAB)
-        tags_tab.pack(**TABS_PACKWARGS)
+        kwd_frame = ttk.Frame(self.search_pane)
+        kwd_frame.columnconfigure(0, weight=1)
+        kwd_frame.grid(row=0, column=0, sticky=tk.NSEW)
+        self.kwd_entry = ttk.Entry(kwd_frame)
+        self.kwd_entry.bind('<Return>', self.search_by_kwd)
+        self.kwd_entry.grid(row=0, column=0, sticky=tk.NSEW)
+        self.busy_wids.append(self.kwd_entry)
+        self.kwd_btn = ttk.Button(kwd_frame, text='Search',
+                                  command=self.search_by_kwd)
+        self.kwd_btn.grid(row=0, column=1, sticky=tk.NSEW)
+        self.busy_wids.append(self.kwd_btn)
+
+        tags_frame = ttk.Frame(self.search_pane)
+        self.search_pane.rowconfigure(1, weight=1)
+        tags_frame.grid(row=1, column=0, sticky=tk.NSEW)
         self.tags_list = tk.StringVar()
         self.tags_lb = tk.Listbox(
-            tags_tab, listvariable=self.tags_list, selectmode=tk.EXTENDED, **LB_KWARGS)
+            tags_frame, listvariable=self.tags_list, selectmode=tk.EXTENDED, **LB_KWARGS)
         self.tags_lb.pack(fill=tk.BOTH, side=tk.LEFT, expand=True)
         scrollbars(self.master, self.tags_lb)
         self.tags_lb.bind('<<ListboxSelect>>', self.search_by_tags)
         self.busy_wids.append(self.tags_lb)
-        self.search_pane.add(tags_tab, text='Tags')
 
-        banks_tab = ttk.Frame(self.search_pane, name=BANKS_TAB)
-        banks_tab.pack(**TABS_PACKWARGS)
+        banks_frame = ttk.Frame(self.search_pane)
+        self.search_pane.rowconfigure(2, weight=1)
+        banks_frame.grid(row=2, column=0, sticky=tk.NSEW)
         self.banks_list = tk.StringVar()
         self.banks_lb = tk.Listbox(
-            banks_tab, listvariable=self.banks_list, selectmode=tk.SINGLE, **LB_KWARGS)
+            banks_frame, listvariable=self.banks_list, selectmode=tk.SINGLE, **LB_KWARGS)
         self.banks_lb.pack(fill=tk.BOTH, side=tk.LEFT, expand=True)
         scrollbars(self.master, self.banks_lb)
         self.banks_lb.bind('<<ListboxSelect>>', self.search_by_bank)
         self.busy_wids.append(self.banks_lb)
-        self.search_pane.add(banks_tab, text='Banks')
-
-        kwd_tab = ttk.Frame(self.search_pane, name=MISC_SRCH_TAB)
-        kwd_tab.pack(**TABS_PACKWARGS)
-        self.kwd_entry = ttk.Entry(kwd_tab)
-        self.kwd_entry.bind('<Return>', self.search_by_kwd)
-        self.kwd_entry.pack(fill=tk.X)
-        self.busy_wids.append(self.kwd_entry)
-        self.kwd_btn = ttk.Button(kwd_tab, text='Search',
-                                  command=self.search_by_kwd)
-        self.kwd_btn.pack(anchor=tk.NW)
-        self.busy_wids.append(self.kwd_btn)
-        self.search_pane.add(kwd_tab, text='Keyword')
 
         ############## END SEARCH PANE ##############
 
         ############## BEGIN PATCHES PANE ##############
 
         patches_pane = ttk.Frame(self.master)
-        patches_pane.pack(**TABS_PACKWARGS)
+        patches_pane.pack(**PANE_PACKWARGS)
         paned_win.add(patches_pane, stretch='always')
 
         self.patch_list = ttk.Treeview(patches_pane, columns=(
             'name', 'patch_tags'), show='headings', style='patchList.Treeview')
-        self.patch_list.pack(**TABS_PACKWARGS)
+        self.patch_list.pack(**PANE_PACKWARGS)
         self.patch_list.bind('<<TreeviewSelect>>', self.update_active_patch)
 
         self.status_text = tk.StringVar(value=STATUS_MSGS[STATUS_READY])
@@ -181,20 +179,20 @@ class AppGui(App, ttk.Frame):
         ############## BEGIN META PANE ##############
 
         meta_pane = ttk.Notebook(self.master)
-        meta_pane.pack(**TABS_PACKWARGS)
+        meta_pane.pack(**PANE_PACKWARGS)
         paned_win.add(meta_pane, stretch='never')
 
         info_tab = ttk.Frame(self.master, name=INFO_TAB)
-        info_tab.pack(**TABS_PACKWARGS)
+        info_tab.pack(**PANE_PACKWARGS)
 
         self.info_list = tk.StringVar()
         info_lb = tk.Listbox(
             info_tab, listvariable=self.info_list, selectmode=tk.SINGLE, **LB_KWARGS)
-        info_lb.pack(**TABS_PACKWARGS)
+        info_lb.pack(**PANE_PACKWARGS)
         meta_pane.add(info_tab, text='Info')
 
         misc_meta_tab = ttk.Frame(self.master, name=MISC_META_TAB)
-        misc_meta_tab.pack(**TABS_PACKWARGS)
+        misc_meta_tab.pack(**PANE_PACKWARGS)
 
         meta_pane.add(misc_meta_tab, text='Insights')
 
@@ -296,13 +294,6 @@ class AppGui(App, ttk.Frame):
         super().refresh()
         self.tags_list.set(self.tags)
         self.banks_list.set(self.banks)
-
-        # TODO only switch tab if banks or tags is selected
-        if len(self.tags) == 0:
-            to_select = BANKS_TAB
-        else:
-            to_select = TAGS_TAB
-        self.search_pane.select('.!notebook.' + to_select)
 
     def searcher(func):
         """Wrapper for functions that perform searches."""

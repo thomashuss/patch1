@@ -24,7 +24,7 @@ TREE_COLORS = (TreeColor('red', '#ff4d4f'), TreeColor('blue', '#5557fa'), TreeCo
 
 # Common properties for listboxes
 LB_KWARGS = {'selectbackground': '#d6be48',
-             'activestyle': tk.NONE, 'width': 30}
+             'activestyle': tk.NONE, 'width': 20}
 
 # Common properties of open/save dialogs
 FILE_KWARGS = {'filetypes': (('All files', '*')), 'initialdir': str(DATA_DIR)}
@@ -69,7 +69,6 @@ class AppGui(App, ttk.Frame):
         self.root = self.master.winfo_toplevel()
 
         self.root.withdraw()
-        self.root.geometry('900x500')
         self.root.protocol('WM_DELETE_WINDOW', self.end)
         self.root.report_callback_exception = self.exc
 
@@ -115,7 +114,8 @@ class AppGui(App, ttk.Frame):
         kwd_frame = ttk.Frame(self.search_pane)
         kwd_frame.columnconfigure(0, weight=1)
         kwd_frame.grid(row=0, column=0, sticky=tk.NSEW)
-        self.kwd_entry = ttk.Entry(kwd_frame)
+        # width=0 means the Entry won't stretch the pane at all.
+        self.kwd_entry = ttk.Entry(kwd_frame, width=0)
         self.kwd_entry.bind('<Return>', self.search_by_kwd)
         self.kwd_entry.grid(row=0, column=0, sticky=tk.NSEW)
         self.busy_wids.append(self.kwd_entry)

@@ -291,7 +291,9 @@ class AppGui(App, ttk.Frame):
         """Event handler for dragging an entry from the patch `Treeview`."""
 
         if self.active_patch > -1:
-            return (MOVE, DND_FILES, super().quick_export(self.active_patch))
+            # Delay since tkinterdnd needs instant return
+            self.root.after(50, super().quick_export, self.active_patch)
+            return (MOVE, DND_FILES, str(self.quick_tmp))
 
     def refresh(self):
         """Refreshes the GUI to reflect new cached data."""

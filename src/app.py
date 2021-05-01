@@ -1,5 +1,4 @@
 import configparser
-import threading
 from pathlib import Path
 from typing import NamedTuple
 from data import *
@@ -252,18 +251,10 @@ class App:
 
             self._db.write_patch(ind, typ, path)
 
-    def quick_export(self, ind: int) -> str:
-        """Asynchronously exports the patch at index `ind` using quick settings. Returns the path to the exported patch."""
+    def quick_export(self, ind: int):
+        """Exports the patch at index `ind` using quick settings. The patch will be saved at the path `self.quick_tmp`."""
 
-        # Quick export is threaded because we expect the client app to be able to show instant feedback to the user,
-        # and exporting isn't always instant.
-        def export_thread(lock, *args):
-            with lock:
-                self._db.write_patch(*args)
-
-        thread = threading.Thread(target=export_thread, args=(threading.Lock(), ind, self._config.get('synth_interface', 'quick_export_as'), self.quick_tmp))
-        thread.start()
-        return str(self.quick_tmp)
+        self._db.write_patch(ind, self._config.get('synth_interface', 'quick_export_as'), self.quick_tmp)
 
     def by_index(self, ind: int) -> PatchMetadata:
         """Returns the patch at index `ind`."""

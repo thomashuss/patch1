@@ -292,7 +292,7 @@ class AppGui(App, ttk.Frame):
 
         if self.active_patch > -1:
             # Delay since tkinterdnd needs instant return
-            self.root.after(50, super().quick_export, self.active_patch)
+            self.root.after(70, super().quick_export, self.active_patch)
             return (MOVE, DND_FILES, str(self.quick_tmp))
 
     def refresh(self):

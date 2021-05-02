@@ -2,7 +2,6 @@ import numpy as np
 from pandas import Series
 from patches import PatchSchema
 from sys import platform
-from collections.abc import Sequence
 from xdrlib import Packer
 from struct import pack
 from io import BytesIO
@@ -77,6 +76,10 @@ class Synth1(PatchSchema):
 
             if lst[2][:3] != 'ver':
                 lst[2:2] = ['ver=' + self.defaults[self.metas.index('ver')]]
+
+            # Remove trailing newline
+            if lst[-1] == '':
+                del lst[-1]
 
             return '\n'.join(lst)
         else:

@@ -74,16 +74,13 @@ class PatchSchema:
 
         vals = dict()
         f_index = 0
-        try:
-            for i in range(0, len(layout) - 2, 2):
-                ind = s.index(layout[i], f_index) + len(layout[i])
-                if layout[i + 2] == '':
-                    f_index = None
-                else:
-                    f_index = s.index(layout[i + 2], ind)
-                vals[layout[i + 1]] = s[ind:f_index]
-        except:
-            raise ValueError('Improperly formatted patch file')
+        for i in range(0, len(layout) - 2, 2):
+            ind = s.index(layout[i], f_index) + len(layout[i])
+            if layout[i + 2] == '':
+                f_index = None
+            else:
+                f_index = s.index(layout[i + 2], ind)
+            vals[layout[i + 1]] = s[ind:f_index]
 
         return vals
 
@@ -91,7 +88,7 @@ class PatchSchema:
         """Reads the properly formatted patch file into a dictionary."""
 
         with open(path, mode='r', encoding=FILE_ENC, errors='replace') as f:
-            patchfile = self.sanity_check(f.read().strip())
+            patchfile = self.sanity_check(f.read())
 
         if patchfile:
             try:
@@ -106,7 +103,7 @@ class PatchSchema:
                     else:
                         ind = int(pdict['index'])
                     params[ind] = self.param_dtype(pdict['value'])
-            except ValueError:
+            except:
                 raise ValueError(
                     'Patch file %s is not properly formatted.' % str(path))
 

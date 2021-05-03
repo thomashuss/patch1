@@ -1,7 +1,8 @@
 #/bin/sh
 # Always build in a virtualenv!
+#virtualenv venv
 source venv/bin/activate
-pyinstaller src/__main__.py \
+pyinstaller __main__.py \
     --noconfirm \
     --name Patch1 \
     --windowed \

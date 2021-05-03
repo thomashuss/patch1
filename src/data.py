@@ -4,9 +4,9 @@ import pandas as pd
 import re
 from pathlib import Path
 from os import cpu_count
-from common import *
-from patches import PatchSchema
-from preset2fxp import *
+from src.common import *
+from src.patches import PatchSchema
+from src.preset2fxp import *
 
 _TAGS_SEP = '|'
 FXP_CHUNK = 'chunk'

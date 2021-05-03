@@ -7,12 +7,10 @@ build
 dist
 hook-*.py
 venv
+patch1.egg-info
 *.spec
 *.pyo
 
 # Nobody cares, Tim Cook.
 .DS_Store
 ._*
-
-# Other stuff
-*.ipynb

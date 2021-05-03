@@ -1,8 +1,9 @@
 from tkinterdnd2 import Tk
 import multiprocessing
-from gui import AppGui
+from src.gui import AppGui
 
-if __name__ == '__main__':
+
+def main():
     multiprocessing.freeze_support()
     root = Tk()
     AppGui(root)

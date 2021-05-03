@@ -1,6 +1,6 @@
 # Always build in a virtualenv!
 & venv\Scripts\Activate.ps1
-pyinstaller src\__main__.py `
+pyinstaller __main__.py `
     --noconfirm `
     --name Patch1 `
     --windowed `

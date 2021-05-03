@@ -2,7 +2,7 @@ import re
 from pathlib import Path
 from typing import Type
 from numpy import nan
-from common import *
+from src.common import *
 
 META_COLS = ['patch_name', 'bank', 'tags']
 

@@ -1,6 +1,6 @@
 import numpy as np
 from pandas import Series
-from patches import PatchSchema
+from src.patches import PatchSchema
 from sys import platform
 from xdrlib import Packer
 from struct import pack

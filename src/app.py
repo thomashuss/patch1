@@ -1,10 +1,10 @@
 import configparser
 from pathlib import Path
 from typing import NamedTuple
-from data import *
-from sorting import TAGS_NAMES
-from common import *
-from patches import PatchSchema
+from src.data import *
+from src.sorting import TAGS_NAMES
+from src.common import *
+from src.patches import PatchSchema
 
 CONFIG_FILE = DATA_DIR / 'config.ini'
 DEFAULT_CONFIG = {

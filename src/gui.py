@@ -3,11 +3,11 @@ import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 from traceback import print_exception
 from collections import namedtuple
-from common import *
-from app import *
+from src.common import *
+from src.app import *
 from tkinterdnd2 import *
-from patches import PatchSchema
-from synth1 import Synth1
+from src.patches import PatchSchema
+from src.synth1 import Synth1
 
 INFO_TAB = 'info'
 MISC_META_TAB = 'meta'

@@ -1,7 +1,6 @@
 import webbrowser
 import tkinter as tk
 import os
-from sys import platform
 from tkinter import ttk, messagebox, filedialog
 from pathlib import Path, PosixPath
 from traceback import print_exception

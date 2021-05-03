@@ -1,6 +1,9 @@
 import webbrowser
 import tkinter as tk
+import os
+from sys import platform
 from tkinter import ttk, messagebox, filedialog
+from pathlib import Path, PosixPath
 from traceback import print_exception
 from collections import namedtuple
 from src.common import *
@@ -24,7 +27,7 @@ TREE_COLORS = (TreeColor('red', '#ff4d4f'), TreeColor('blue', '#5557fa'), TreeCo
 
 # Common properties for listboxes
 LB_KWARGS = {'selectbackground': '#d6be48',
-             'activestyle': tk.NONE, 'width': 20}
+             'activestyle': tk.NONE, 'width': 25}
 
 # Common properties of open/save dialogs
 FILE_KWARGS = {'filetypes': (('All files', '*')), 'initialdir': str(DATA_DIR)}
@@ -44,6 +47,14 @@ def scrollbars(master, box, drawX=True, drawY=True):
         xscroll.config(command=box.xview)
         box.config(xscrollcommand=xscroll.set)
 
+def path_to_dnd(path: Path) -> str:
+    """Converts a `Path` into an acceptable value for `tkinterdnd2.`"""
+
+    if os.path.sep == '/':
+        return str(path)
+    else:
+        # tkinterdnd will only accept forward slash sep
+        return '/'.join(str(path).split(os.path.sep))
 
 class AppGui(App, ttk.Frame):
     """Graphical implementation of the `App`."""
@@ -293,7 +304,7 @@ class AppGui(App, ttk.Frame):
         if self.active_patch > -1:
             # Delay since tkinterdnd needs instant return
             self.root.after(70, super().quick_export, self.active_patch)
-            return (MOVE, DND_FILES, str(self.quick_tmp))
+            return (MOVE, DND_FILES, path_to_dnd(self.quick_tmp))
 
     def refresh(self):
         """Refreshes the GUI to reflect new cached data."""

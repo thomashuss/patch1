@@ -62,7 +62,7 @@ class PatchSchema:
         with open(path, mode='w', encoding=FILE_ENC) as f:
             f.write(self.file_syntax % to_write)
 
-    def sanity_check(self, file: str) -> str:
+    def sanity_check(self, file: str) -> Union[str, bool]:
         """TBD. This function should correct and return an improperly formatted patch file, or `False` if the file
         can't be formatted. """
         return file

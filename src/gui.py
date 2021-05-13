@@ -1,13 +1,13 @@
-import webbrowser
-import tkinter as tk
 import os
-from tkinter import ttk, messagebox, filedialog
-from pathlib import Path, PosixPath
-from traceback import print_exception
+import tkinter as tk
+import webbrowser
+from pathlib import Path
 from collections import namedtuple
-from src.common import *
-from src.app import *
+from tkinter import ttk, messagebox, filedialog
+from traceback import print_exception
 from tkinterdnd2 import *
+from src.app import *
+from src.common import *
 from src.patches import PatchSchema
 from src.synth1 import Synth1
 
@@ -29,22 +29,23 @@ LB_KWARGS = {'selectbackground': '#d6be48',
              'activestyle': tk.NONE, 'width': 25}
 
 # Common properties of open/save dialogs
-FILE_KWARGS = {'filetypes': (('All files', '*')), 'initialdir': str(DATA_DIR)}
+FILE_KWARGS = {'filetypes': (('All files', '*')), 'initialdir': str(Path.home())}
 
 
-def scrollbars(master, box, drawX=True, drawY=True):
+def scrollbars(master, box, draw_x=True, draw_y=True):
     """Constructs scrollbars for a `Listbox` or `Treeview`."""
 
-    if drawY:
+    if draw_y:
         yscroll = ttk.Scrollbar(master)
         yscroll.pack(before=box, side=tk.RIGHT, fill=tk.Y)
         yscroll.config(command=box.yview)
         box.config(yscrollcommand=yscroll.set)
-    if drawX:
+    if draw_x:
         xscroll = ttk.Scrollbar(master, orient=tk.HORIZONTAL)
         xscroll.pack(before=box, side=tk.BOTTOM, fill=tk.X)
         xscroll.config(command=box.xview)
         box.config(xscrollcommand=xscroll.set)
+
 
 def path_to_dnd(path: Path) -> str:
     """Converts a `Path` into an acceptable value for `tkinterdnd2.`"""
@@ -54,6 +55,22 @@ def path_to_dnd(path: Path) -> str:
     else:
         # tkinterdnd will only accept forward slash sep
         return '/'.join(str(path).split(os.path.sep))
+
+
+def searcher(func):
+    """Wrapper for functions that perform searches."""
+
+    # Don't want the tkinter event object.
+    def inner(self, _=None):
+        try:
+            return func(self)
+        except IndexError:
+            # An event handler for listbox selection can be called even when
+            # nothing is selected, so silently ignore it.
+            pass
+
+    return inner
+
 
 class AppGui(App, ttk.Frame):
     """Graphical implementation of the `App`."""
@@ -82,9 +99,9 @@ class AppGui(App, ttk.Frame):
         self.root.protocol('WM_DELETE_WINDOW', self.end)
         self.root.report_callback_exception = self.exc
 
-        ################################################
-        ############# BEGIN UI DEFINITIONS #############
-        ################################################
+        ##################################################
+        #              BEGIN UI DEFINITIONS              #
+        ##################################################
 
         paned_win = tk.PanedWindow(orient=tk.HORIZONTAL)
         paned_win.pack(fill=tk.BOTH, expand=True)
@@ -107,14 +124,16 @@ class AppGui(App, ttk.Frame):
         edit.add_command(label='Settings')
         menubar.add_cascade(label='Edit', menu=edit)
 
-        help = tk.Menu(menubar, tearoff=False)
-        help.add_command(label='%s Website' % APP_NAME,
-                         command=lambda: webbrowser.open(APP_WEBSITE, new=2))
+        help_menu = tk.Menu(menubar, tearoff=False)
+        help_menu.add_command(label='%s Website' % APP_NAME,
+                              command=lambda: webbrowser.open(APP_WEBSITE, new=2))
 
-        menubar.add_cascade(label='Help', menu=help)
+        menubar.add_cascade(label='Help', menu=help_menu)
         self.master.config(menu=menubar)
 
-        ############## BEGIN SEARCH PANE ##############
+        ###############################################
+        #              BEGIN SEARCH PANE              #
+        ###############################################
 
         self.search_pane = ttk.Frame(self.master)
         self.search_pane.pack(**PANE_PACKWARGS)
@@ -156,9 +175,13 @@ class AppGui(App, ttk.Frame):
         self.banks_lb.bind('<<ListboxSelect>>', self.search_by_bank)
         self.busy_wids.append(self.banks_lb)
 
-        ############## END SEARCH PANE ##############
+        #############################################
+        #              END SEARCH PANE              #
+        #############################################
 
-        ############## BEGIN PATCHES PANE ##############
+        ################################################
+        #              BEGIN PATCHES PANE              #
+        ################################################
 
         patches_pane = ttk.Frame(self.master)
         patches_pane.pack(**PANE_PACKWARGS)
@@ -174,7 +197,7 @@ class AppGui(App, ttk.Frame):
         status_label.pack(
             before=self.patch_list, side=tk.BOTTOM, anchor=tk.W)
 
-        scrollbars(patches_pane, self.patch_list, drawX=False)
+        scrollbars(patches_pane, self.patch_list, draw_x=False)
         for c in TREE_COLORS:
             self.patch_list.tag_configure(**c._asdict())
         self.patch_list.heading('name', text='Name')
@@ -183,9 +206,13 @@ class AppGui(App, ttk.Frame):
         self.patch_list.drag_source_register(1, DND_FILES)
         self.patch_list.dnd_bind('<<DragInitCmd>>', self.quick_export)
 
-        ############## END PATCHES PANE ##############
+        ##############################################
+        #              END PATCHES PANE              #
+        ##############################################
 
-        ############## BEGIN META PANE ##############
+        #############################################
+        #              BEGIN META PANE              #
+        #############################################
 
         meta_pane = ttk.Notebook(self.master)
         meta_pane.pack(**PANE_PACKWARGS)
@@ -205,7 +232,9 @@ class AppGui(App, ttk.Frame):
 
         meta_pane.add(misc_meta_tab, text='Insights')
 
-        ############## END META PANE ##############
+        ###########################################
+        #              END META PANE              #
+        ###########################################
 
         self.root.deiconify()
         super().__init__(self.schema)
@@ -272,7 +301,7 @@ class AppGui(App, ttk.Frame):
         count = len(kids)
         if count > 0:
             new_text = 'Found ' + \
-                str(count) + ' patch' + ('es.' if count > 1 else '.')
+                       str(count) + ' patch' + ('es.' if count > 1 else '.')
 
             # self.patch_list.focus_set()
             self.patch_list.see(kids[0])
@@ -303,7 +332,7 @@ class AppGui(App, ttk.Frame):
         if self.active_patch > -1:
             # Delay since tkinterdnd needs instant return
             self.root.after(70, super().quick_export, self.active_patch)
-            return (MOVE, DND_FILES, path_to_dnd(self.quick_tmp))
+            return MOVE, DND_FILES, path_to_dnd(self.quick_tmp)
 
     def refresh(self):
         """Refreshes the GUI to reflect new cached data."""
@@ -312,19 +341,6 @@ class AppGui(App, ttk.Frame):
         self.clear_selection()
         self.tags_list.set(self.tags)
         self.banks_list.set(self.banks)
-
-    def searcher(func):
-        """Wrapper for functions that perform searches."""
-
-        # Don't want the tkinter event object.
-        def inner(self, _=None):
-            try:
-                return func(self)
-            except IndexError:
-                # An event handler for listbox selection can be called even when
-                # nothing is selected, so silently ignore it.
-                pass
-        return inner
 
     @searcher
     def search_by_tags(self):
@@ -356,10 +372,10 @@ class AppGui(App, ttk.Frame):
     def new_database_prompt(self):
         """Prompts the user to select a directory containing patch banks and then imports that directory."""
 
-        dir = filedialog.askdirectory(
+        new_dir = filedialog.askdirectory(
             title='Select the folder containing your banks:', initialdir=FILE_KWARGS['initialdir'])
-        if len(dir) != 0:
-            super().new_database(dir)
+        if len(new_dir) != 0:
+            super().new_database(new_dir)
 
     def end(self):
         """Closes the program."""

@@ -3,6 +3,7 @@
 
 from collections import namedtuple
 from struct import calcsize, pack
+from typing import Union
 
 FXP_HEADER_FMT = '>4si4s4i28s'
 FXP_PREAMBEL_SIZE = calcsize('>4si')
@@ -23,11 +24,10 @@ ChunkPreset = namedtuple('ChunkPreset', PRESET_BASE_FIELDS + ('chunk',))
 Preset = namedtuple('Preset', PRESET_BASE_FIELDS + ('params',))
 
 
-def write_fxp(preset, path: str):
+def write_fxp(preset: Union[Preset, ChunkPreset], path: str):
     """Writes the specified preset to a .fxp file at the `path`."""
 
     with open(path, 'wb') as fp:
-
         if preset.plugin_version is not None:
             fx_version = preset.plugin_version
         else:

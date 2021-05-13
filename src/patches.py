@@ -1,6 +1,6 @@
 import re
 from pathlib import Path
-from typing import Type
+from typing import Type, Union
 from numpy import nan
 from src.common import *
 
@@ -23,13 +23,15 @@ class PatchSchema:
 
     params: list[str]  # Names of parameters
     param_dtype: Type  # Data type of parameter values
-    # This will be set in __init__ ~~~ total number of parameters
+    # This will be set in __init__; total number of parameters
     num_params: int
     values: list  # Ordered defaults for parameters
 
-    # Basic fstring-like syntax of a patch file, must contain {name} and {params} along with any other metadata (NOTE: for right now, {params} must be at the end of the file)
+    # Basic fstring-like syntax of a patch file, must contain {name} and {params} along with any other metadata (
+    # NOTE: for right now, {params} must be at the end of the file)
     file_syntax: str
-    # Basic fstring-like syntax of a parameter within a patch file, must contain either {name} or {index}, along with a {value}
+    # Basic fstring-like syntax of a parameter within a patch file, must contain either {name} or {index},
+    # along with a {value}
     file_param: str
     # Character(s) that denote a parameter within a patch file
     param_delimiter: str
@@ -39,7 +41,7 @@ class PatchSchema:
         if getattr(self, 'file_base', None) is None:
             self.file_base = 'patch'
 
-        brackets_re = re.compile(r'\{|\}')
+        brackets_re = re.compile(r'[{}]')
         self._file_layout = brackets_re.split(self.file_syntax)
         self._param_layout = brackets_re.split(self.file_param)
         if not (len(self._file_layout) % 2 and len(self._param_layout) % 2):
@@ -61,7 +63,8 @@ class PatchSchema:
             f.write(self.file_syntax % to_write)
 
     def sanity_check(self, file: str) -> str:
-        """TBD. This function should correct and return an improperly formatted patch file, or `False` if the file can't be formatted."""
+        """TBD. This function should correct and return an improperly formatted patch file, or `False` if the file
+        can't be formatted. """
         return file
 
     def _unformat(self, s: str, param: bool = False) -> dict:
@@ -84,8 +87,9 @@ class PatchSchema:
 
         return vals
 
-    def read_patchfile(self, path: Path) -> dict:
-        """Reads the properly formatted patch file into a dictionary."""
+    def read_patchfile(self, path: Path) -> Union[dict, bool]:
+        """Reads the properly formatted patch file into a `dict`. Returns `False` if the file is improperly
+        formatted."""
 
         with open(path, mode='r', encoding=FILE_ENC, errors='replace') as f:
             patchfile = self.sanity_check(f.read())
@@ -122,5 +126,6 @@ class PatchSchema:
         pass
 
     def make_fxp_params(self, params) -> list:
-        """TBD. This function should convert a list of parameter values in original format to FXP parameter values (0-1 float)."""
+        """TBD. This function should convert a list of parameter values in original format to FXP parameter values (
+        0-1 float). """
         pass

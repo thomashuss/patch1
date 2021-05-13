@@ -6,7 +6,6 @@ from src.sorting import TAGS_NAMES
 from src.common import *
 from src.patches import PatchSchema
 
-CONFIG_FILE = DATA_DIR / 'config.ini'
 DEFAULT_CONFIG = {
     'database': {
         'auto_load': True,
@@ -46,11 +45,40 @@ class PatchMetadata(NamedTuple):
         return cls(patch.name, patch['patch_name'], patch['bank'], patch['color'], tags_to_str(patch['tags']))
 
 
+def searcher(func):
+    """Wrapper for functions that perform searches."""
+
+    def inner(self, q):
+        if len(q) > 0 and self.last_query != q:
+            self.last_query = q
+            self.status(STATUS_SEARCH)
+            func(self, q)
+            self.search_done()
+            self.unwait()
+            return True
+        return False
+
+    return inner
+
+
+def reloads(func):
+    """Wrapper for functions that require a reload of the view."""
+
+    def inner(self, *args, **kwargs):
+        ret = func(self, *args, **kwargs)
+        self.refresh()
+        return ret
+
+    return inner
+
+
 class App:
     """Implements the program's controller."""
 
     _db: PatchDatabase  # The active patch database
     _config: configparser.ConfigParser
+    _data_dir: Path
+    _config_file: Path
     schema: PatchSchema
 
     quick_tmp: Path  # Temporary file for quick export
@@ -65,6 +93,8 @@ class App:
 
         self.status(STATUS_OPEN)
 
+        self._data_dir = Path.home() / ('.%s' % APP_NAME_INLINE)
+        self._config_file = self._data_dir / 'config.ini'
         self.schema = schema
         self._db = PatchDatabase(self.schema)
         self._config = configparser.ConfigParser()
@@ -118,29 +148,6 @@ class App:
         else:
             return []
 
-    def searcher(func):
-        """Wrapper for functions that perform searches."""
-
-        def inner(self, q):
-            if len(q) > 0 and self.last_query != q:
-                self.last_query = q
-                self.status(STATUS_SEARCH)
-                func(self, q)
-                self.search_done()
-                self.unwait()
-                return True
-            return False
-        return inner
-
-    def reloads(func):
-        """Wrapper for functions that require a reload of the view."""
-
-        def inner(self, *args, **kwargs):
-            ret = func(self, *args, **kwargs)
-            self.refresh()
-            return ret
-        return inner
-
     @searcher
     def search_by_tags(self, tags: list):
         """Searches for patches matching `tags`."""
@@ -181,7 +188,8 @@ class App:
         self.status(STATUS_WAIT)
         acc = self._db.train_classifier()
         self.info('Based on your current tags, this tagging method is estimated to be %f%% accurate. ' % (acc * 100) +
-                  'To improve its accuracy, manually tag some untagged patches and correct existing tags, then run this again.')
+                  'To improve its accuracy, manually tag some untagged patches and correct existing tags, then run '
+                  'this again.')
         self.status(STATUS_SIM_TAG)
         self._db.classify_tags()
 
@@ -195,11 +203,11 @@ class App:
             self.wait()
 
     @reloads
-    def new_database(self, dir):
+    def new_database(self, patches_dir):
         """Creates a new database with patches from `dir`."""
 
         self.status(STATUS_IMPORT)
-        self._db.bootstrap(Path(dir))
+        self._db.bootstrap(Path(patches_dir))
 
     @reloads
     def open_database(self, path, silent=False):
@@ -224,22 +232,22 @@ class App:
     def load_config(self):
         """Loads the config file for the program, or create one if it doesn't exist."""
 
-        DATA_DIR.mkdir(exist_ok=True)
+        self._data_dir.mkdir(exist_ok=True)
         self._config.read_dict(DEFAULT_CONFIG)
-        if CONFIG_FILE.is_file():
-            self._config.read(CONFIG_FILE)
+        if self._config_file.is_file():
+            self._config.read(self._config_file)
         else:
-            CONFIG_FILE.touch()
+            self._config_file.touch()
 
         if self._config.get('synth_interface', 'quick_export_as') == PATCH_FILE:
             self.quick_tmp = Path(
-                DATA_DIR / '%s.%s' % (self.schema.file_base, self.schema.file_ext)).resolve()
+                self._data_dir / ('%s.%s' % (self.schema.file_base, self.schema.file_ext))).resolve()
         else:
-            self.quick_tmp = Path(DATA_DIR / TMP_FXP_NAME).resolve()
+            self.quick_tmp = Path(self._data_dir / TMP_FXP_NAME).resolve()
         self.quick_tmp.touch(exist_ok=True)
 
         if self._config.getboolean('database', 'auto_load'):
-            self.open_database(DATA_DIR, silent=True)
+            self.open_database(self._data_dir, silent=True)
 
     def export_patch(self, ind: int, typ=PATCH_FILE, path=None):
         """Exports the patch at index `ind`."""
@@ -252,7 +260,8 @@ class App:
             self._db.write_patch(ind, typ, path)
 
     def quick_export(self, ind: int):
-        """Exports the patch at index `ind` using quick settings. The patch will be saved at the path `self.quick_tmp`."""
+        """Exports the patch at index `ind` using quick settings. The patch will be saved at the path
+        `self.quick_tmp`. """
 
         self._db.write_patch(ind, self._config.get('synth_interface', 'quick_export_as'), self.quick_tmp)
 
@@ -265,9 +274,9 @@ class App:
         """Housekeeping before exiting the program."""
 
         if self._config.getboolean('database', 'auto_save'):
-            self.save_database(DATA_DIR)
+            self.save_database(self._data_dir)
 
-        with open(CONFIG_FILE, 'w') as cfile:
+        with open(self._config_file, 'w') as cfile:
             self._config.write(cfile)
         self.quick_tmp.unlink(missing_ok=True)
 

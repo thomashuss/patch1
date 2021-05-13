@@ -2,6 +2,7 @@
 
 pandas >= 1.2.3
 sklearn >= 0.0
+numpy >= 1.20.2
 
 # Unfortunately, pytables doesn't have wheels for cp3.9 on Windows or Mac, and the build will probably fail.
 # On Windows, download an unofficial wheel from https://www.lfd.uci.edu/~gohlke/pythonlibs/#pytables

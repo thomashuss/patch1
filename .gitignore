@@ -1,5 +1,6 @@
 # IDE settings
 .vscode
+.idea
 
 # Build/caches
 __pycache__

@@ -18,6 +18,18 @@ PATCH_FILE = 'patch'
 JOBS = min(4, cpu_count())
 
 
+def volatile_db(func):
+    """Wrapper for functions that modify the active database."""
+
+    def inner(self, *args, **kwargs):
+        ret = func(self, *args, **kwargs)
+        self.modified_db = True
+        self.refresh()
+        return ret
+
+    return inner
+
+
 class PatchDatabase:
     """Model for a pandas-based patch database conforming to a `PatchSchema`."""
 
@@ -37,23 +49,13 @@ class PatchDatabase:
 
         self.schema = schema
 
-    def volatile_db(func):
-        """Wrapper for functions that modify the active database."""
-
-        def inner(self, *args, **kwargs):
-            ret = func(self, *args, **kwargs)
-            self.modified_db = True
-            self.refresh()
-            return ret
-        return inner
-
     @volatile_db
     def bootstrap(self, root_dir: Path):
         """Creates a new database from the contents of the specified directory and loads the database."""
 
         re_file = re.compile(self.schema.file_pattern)
         files = filter(lambda f: re_file.match(f.name)
-                       != None, root_dir.glob('**/*'))
+                       is not None, root_dir.glob('**/*'))
 
         meta = []
         params = []
@@ -86,7 +88,7 @@ class PatchDatabase:
         if not isinstance(path, Path):
             path = Path(path)
 
-        store = pd.HDFStore(path / DB_FILE, mode='r')
+        store = pd.HDFStore(str(path / DB_FILE), mode='r')
         self._df = store.get(DB_KEY)
 
         try:
@@ -104,7 +106,7 @@ class PatchDatabase:
             path = Path(path)
 
         if self.modified_db:
-            store = pd.HDFStore(path / DB_FILE, mode='w')
+            store = pd.HDFStore(str(path / DB_FILE), mode='w')
             store.put(DB_KEY, self._df, format='table')
             store.put(TAGS_KEY, self._tags)
             store.close()
@@ -126,8 +128,8 @@ class PatchDatabase:
         self.banks = self.get_categories('bank')
 
     def train_classifier(self) -> float:
-        """Constructs a k-nearest neighbors classifier for patches based on their parameters. The classifier is not intended to persist across sessions.
-        Returns the accuracy of the classifier."""
+        """Constructs a k-nearest neighbors classifier for patches based on their parameters. The classifier is not
+        intended to persist across sessions. Returns the accuracy of the classifier. """
 
         from sklearn.pipeline import Pipeline
         from sklearn.neighbors import KNeighborsClassifier
@@ -202,7 +204,8 @@ class PatchDatabase:
         return self._df.iloc[index]
 
     def write_patch(self, index, typ, path):
-        """Writes the patch at `index` to a file of type `typ` (either `FXP_CHUNK`, `FXP_PARAMS`, or `PATCH_FILE`) into a file at `path`."""
+        """Writes the patch at `index` to a file of type `typ` (either `FXP_CHUNK`, `FXP_PARAMS`, or `PATCH_FILE`)
+        into a file at `path`. """
 
         if not isinstance(path, Path):
             path = Path(path)
@@ -233,12 +236,12 @@ class PatchDatabase:
                 raise ValueError(
                     'Cannot write a patch to a file type of %s' % typ)
 
-            write_fxp(preset, path)
+            write_fxp(preset, str(path))
 
     @volatile_db
     def tags_from_val_defs(self, re_defs: dict, col: str):
-        """Tags patches in the database, where the patch's `col` value matches a regular expression in `re_defs`, with the dictionary key
-        of the matching expression."""
+        """Tags patches in the database, where the patch's `col` value matches a regular expression in `re_defs`,
+        with the dictionary key of the matching expression. """
 
         for tag, pattern in re_defs.items():
             def apply(row):
@@ -251,7 +254,8 @@ class PatchDatabase:
 
     @volatile_db
     def change_tags(self, index: int, tags: list, replace: bool = True):
-        """Changes the tags of the patch at `index` to `tags`. If `replace` is `False`, `tags` will be added to the patch's existing tags."""
+        """Changes the tags of the patch at `index` to `tags`. If `replace` is `False`, `tags` will be added to the
+        patch's existing tags. """
 
         if replace:
             old_tags = ''
@@ -283,7 +287,7 @@ def encode_tags(tags, old_tags: str = '') -> str:
 
     if len(old_tags) > 0:
         old_tagsl = old_tags.split(_TAGS_SEP)
-        tags = list(filter(lambda tag: not tag in old_tagsl, tags))
+        tags = list(filter(lambda tag: tag not in old_tagsl, tags))
         old_tags = old_tags + (_TAGS_SEP if len(tags) > 0 else '')
 
     return old_tags + _TAGS_SEP.join(tags)

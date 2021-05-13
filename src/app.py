@@ -75,10 +75,10 @@ def reloads(func):
 class App:
     """Implements the program's controller."""
 
-    _db: PatchDatabase  # The active patch database
-    _config: configparser.ConfigParser
-    _data_dir: Path
-    _config_file: Path
+    __db: PatchDatabase  # The active patch database
+    __config: configparser.ConfigParser
+    __data_dir: Path
+    __config_file: Path
     schema: PatchSchema
 
     quick_tmp: Path  # Temporary file for quick export
@@ -93,11 +93,11 @@ class App:
 
         self.status(STATUS_OPEN)
 
-        self._data_dir = Path.home() / ('.%s' % APP_NAME_INLINE)
-        self._config_file = self._data_dir / 'config.ini'
+        self.__data_dir = Path.home() / ('.%s' % APP_NAME_INLINE)
+        self.__config_file = self.__data_dir / 'config.ini'
         self.schema = schema
-        self._db = PatchDatabase(self.schema)
-        self._config = configparser.ConfigParser()
+        self.__db = PatchDatabase(self.schema)
+        self.__config = configparser.ConfigParser()
 
         self.load_config()
         self.status(STATUS_READY)
@@ -152,26 +152,26 @@ class App:
     def search_by_tags(self, tags: list):
         """Searches for patches matching `tags`."""
 
-        self._db.find_patches_by_tags(tags).apply(self._put_patch, axis=1)
+        self.__db.find_patches_by_tags(tags).apply(self._put_patch, axis=1)
 
     @searcher
     def search_by_bank(self, bank: str):
         """Searches for patches in bank `bank`."""
 
-        self._db.find_patches_by_val(
+        self.__db.find_patches_by_val(
             bank, 'bank', exact=True).apply(self._put_patch, axis=1)
 
     @searcher
     def keyword_search(self, kwd: str):
         """Searches for patches matching keyword `kwd`."""
 
-        self._db.keyword_search(kwd).apply(self._put_patch, axis=1)
+        self.__db.keyword_search(kwd).apply(self._put_patch, axis=1)
 
     def refresh(self):
         """Refreshes cached indexes."""
 
-        self.tags = self._db.tags
-        self.banks = self._db.banks
+        self.tags = self.__db.tags
+        self.banks = self.__db.banks
         self.status(STATUS_READY)
 
     @reloads
@@ -179,19 +179,19 @@ class App:
         """Tags patches based on their names."""
 
         self.status(STATUS_NAME_TAG)
-        self._db.tags_from_val_defs(TAGS_NAMES, 'patch_name')
+        self.__db.tags_from_val_defs(TAGS_NAMES, 'patch_name')
 
     @reloads
     def tag_similar(self):
         """Tags patches based on their similarity to other patches."""
 
         self.status(STATUS_WAIT)
-        acc = self._db.train_classifier()
+        acc = self.__db.train_classifier()
         self.info('Based on your current tags, this tagging method is estimated to be %f%% accurate. ' % (acc * 100) +
                   'To improve its accuracy, manually tag some untagged patches and correct existing tags, then run '
                   'this again.')
         self.status(STATUS_SIM_TAG)
-        self._db.classify_tags()
+        self.__db.classify_tags()
 
     def status(self, msg):
         """Fully implement this function by updating a user-facing status indicator before calling the super."""
@@ -207,7 +207,7 @@ class App:
         """Creates a new database with patches from `dir`."""
 
         self.status(STATUS_IMPORT)
-        self._db.bootstrap(Path(patches_dir))
+        self.__db.bootstrap(Path(patches_dir))
 
     @reloads
     def open_database(self, path, silent=False):
@@ -218,7 +218,7 @@ class App:
 
         if path.is_dir():
             try:
-                self._db.from_disk(path)
+                self.__db.from_disk(path)
             except:
                 if not silent:
                     raise Exception('That is not a valid data folder.')
@@ -226,58 +226,58 @@ class App:
     def save_database(self, path):
         """Saves the active database to disk."""
 
-        if self._db.is_active():
-            self._db.to_disk(path)
+        if self.__db.is_active():
+            self.__db.to_disk(path)
 
     def load_config(self):
         """Loads the config file for the program, or create one if it doesn't exist."""
 
-        self._data_dir.mkdir(exist_ok=True)
-        self._config.read_dict(DEFAULT_CONFIG)
-        if self._config_file.is_file():
-            self._config.read(self._config_file)
+        self.__data_dir.mkdir(exist_ok=True)
+        self.__config.read_dict(DEFAULT_CONFIG)
+        if self.__config_file.is_file():
+            self.__config.read(self.__config_file)
         else:
-            self._config_file.touch()
+            self.__config_file.touch()
 
-        if self._config.get('synth_interface', 'quick_export_as') == PATCH_FILE:
+        if self.__config.get('synth_interface', 'quick_export_as') == PATCH_FILE:
             self.quick_tmp = Path(
-                self._data_dir / ('%s.%s' % (self.schema.file_base, self.schema.file_ext))).resolve()
+                self.__data_dir / ('%s.%s' % (self.schema.file_base, self.schema.file_ext))).resolve()
         else:
-            self.quick_tmp = Path(self._data_dir / TMP_FXP_NAME).resolve()
+            self.quick_tmp = Path(self.__data_dir / TMP_FXP_NAME).resolve()
         self.quick_tmp.touch(exist_ok=True)
 
-        if self._config.getboolean('database', 'auto_load'):
-            self.open_database(self._data_dir, silent=True)
+        if self.__config.getboolean('database', 'auto_load'):
+            self.open_database(self.__data_dir, silent=True)
 
     def export_patch(self, ind: int, typ=PATCH_FILE, path=None):
         """Exports the patch at index `ind`."""
 
         if ind:
             if path is None:
-                path = Path(self._config.get(
+                path = Path(self.__config.get(
                     'synth_interface', 'export_to'))
 
-            self._db.write_patch(ind, typ, path)
+            self.__db.write_patch(ind, typ, path)
 
     def quick_export(self, ind: int):
         """Exports the patch at index `ind` using quick settings. The patch will be saved at the path
         `self.quick_tmp`. """
 
-        self._db.write_patch(ind, self._config.get('synth_interface', 'quick_export_as'), self.quick_tmp)
+        self.__db.write_patch(ind, self.__config.get('synth_interface', 'quick_export_as'), self.quick_tmp)
 
     def by_index(self, ind: int) -> PatchMetadata:
         """Returns the patch at index `ind`."""
 
-        return PatchMetadata.from_patch(self._db.get_patch_by_index(ind))
+        return PatchMetadata.from_patch(self.__db.get_patch_by_index(ind))
 
     def end(self):
         """Housekeeping before exiting the program."""
 
-        if self._config.getboolean('database', 'auto_save'):
-            self.save_database(self._data_dir)
+        if self.__config.getboolean('database', 'auto_save'):
+            self.save_database(self.__data_dir)
 
-        with open(self._config_file, 'w') as cfile:
-            self._config.write(cfile)
+        with open(self.__config_file, 'w') as cfile:
+            self.__config.write(cfile)
         self.quick_tmp.unlink(missing_ok=True)
 
 

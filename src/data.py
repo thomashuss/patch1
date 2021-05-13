@@ -33,9 +33,9 @@ def volatile_db(func):
 class PatchDatabase:
     """Model for a pandas-based patch database conforming to a `PatchSchema`."""
 
-    _df: pd.DataFrame = None
-    _tags: pd.DataFrame
-    _knn = None
+    __df: pd.DataFrame = None
+    __tags: pd.DataFrame
+    __knn = None
     schema: PatchSchema
 
     modified_db = False
@@ -80,7 +80,7 @@ class PatchDatabase:
         for col, pos in self.schema.possibilites.items():
             meta_df[col] = pd.Categorical(meta_df[col], categories=pos)
 
-        self._df = meta_df.join(param_df)
+        self.__df = meta_df.join(param_df)
 
     def from_disk(self, path: Path):
         """Loads a database from the directory `path`."""
@@ -89,10 +89,10 @@ class PatchDatabase:
             path = Path(path)
 
         store = pd.HDFStore(str(path / DB_FILE), mode='r')
-        self._df = store.get(DB_KEY)
+        self.__df = store.get(DB_KEY)
 
         try:
-            self._tags = store.get(TAGS_KEY)
+            self.__tags = store.get(TAGS_KEY)
         except KeyError:
             pass
         store.close()
@@ -107,24 +107,24 @@ class PatchDatabase:
 
         if self.modified_db:
             store = pd.HDFStore(str(path / DB_FILE), mode='w')
-            store.put(DB_KEY, self._df, format='table')
-            store.put(TAGS_KEY, self._tags)
+            store.put(DB_KEY, self.__df, format='table')
+            store.put(TAGS_KEY, self.__tags)
             store.close()
 
     def is_active(self) -> bool:
         """Returns `True` if a database is loaded, `False` otherwise."""
 
-        return self._df is not None
+        return self.__df is not None
 
     def refresh(self, _tags_df: pd.DataFrame = None):
         """Rebuilds cached indexes for the active database."""
 
         if _tags_df is None:
-            self._tags = self._df['tags'].str.get_dummies(_TAGS_SEP)
-            self.tags = self._tags.columns.to_list()
+            self.__tags = self.__df['tags'].str.get_dummies(_TAGS_SEP)
+            self.tags = self.__tags.columns.to_list()
         else:
-            self._tags = _tags_df
-            self.tags = self._tags.columns.to_list()
+            self.__tags = _tags_df
+            self.tags = self.__tags.columns.to_list()
         self.banks = self.get_categories('bank')
 
     def train_classifier(self) -> float:
@@ -136,36 +136,36 @@ class PatchDatabase:
         from sklearn.preprocessing import StandardScaler
         from sklearn.model_selection import train_test_split
 
-        tagged_mask = self._df['tags'] != ''
-        df = self._df.loc[tagged_mask]
+        tagged_mask = self.__df['tags'] != ''
+        df = self.__df.loc[tagged_mask]
         if len(df) == 0:
             raise Exception('Add some tags and try again.')
         df_slice = df[self.schema.params]
 
-        indicators = self._tags[tagged_mask]
+        indicators = self.__tags[tagged_mask]
         X = df_slice.to_numpy()
         y = indicators.to_numpy()
 
         X_train, X_test, y_train, y_test = train_test_split(X, y)
-        self._knn = Pipeline([('scaler', StandardScaler()), ('knn', KNeighborsClassifier(
+        self.__knn = Pipeline([('scaler', StandardScaler()), ('knn', KNeighborsClassifier(
             n_jobs=JOBS, p=1, weights='distance'))])
-        self._knn.fit(X_train, y_train)
-        return float(self._knn.score(X_test, y_test))
+        self.__knn.fit(X_train, y_train)
+        return float(self.__knn.score(X_test, y_test))
 
     @volatile_db
     def classify_tags(self):
         """Tags patches based on their parameters using the previously generated classifier model."""
 
-        assert self._knn is not None, 'Please create a classifier model first.'
-        predictions = self._knn.predict(
-            self._df[self.schema.params].to_numpy())
+        assert self.__knn is not None, 'Please create a classifier model first.'
+        predictions = self.__knn.predict(
+            self.__df[self.schema.params].to_numpy())
 
         def classify(patch: pd.Series) -> str:
             prediction = predictions[int(patch.name)]
             tags = [self.tags[i] for i in np.asarray(prediction).nonzero()[0]]
             return encode_tags(tags, patch['tags'])
 
-        self._df['tags'] = self._df.apply(classify, axis=1)
+        self.__df['tags'] = self.__df.apply(classify, axis=1)
 
     def find_patches_by_val(self, find: str, col: str, exact=False, regex=False) -> pd.DataFrame:
         """Finds patches in the database matching `find` value in column `col`, either as a substring (`exact=False`),
@@ -173,18 +173,18 @@ class PatchDatabase:
         sliced `DataFrame`."""
 
         if exact:
-            mask = self._df[col] == find
+            mask = self.__df[col] == find
         else:
-            mask = self._df[col].str.contains(find, case=False, regex=regex)
+            mask = self.__df[col].str.contains(find, case=False, regex=regex)
 
-        return self._df.loc[mask]
+        return self.__df.loc[mask]
 
     def find_patches_by_tags(self, tags: list) -> pd.DataFrame:
         """Finds patches in the database tagged with (at least) each specified tag. Returns a sliced `DataFrame`."""
 
         # create masks for each tag, unpack into list, take logical and,
         # reduce into single mask, return slice of dataframe with that mask
-        return self._df.loc[np.logical_and.reduce([*(self._tags[tag] == 1 for tag in tags)])]
+        return self.__df.loc[np.logical_and.reduce([*(self.__tags[tag] == 1 for tag in tags)])]
 
     def keyword_search(self, kwd: str) -> pd.DataFrame:
         """Finds metadata of patches in the database whose name matches the specified keyword query. Returns a
@@ -195,13 +195,13 @@ class PatchDatabase:
     def get_categories(self, col: str) -> list:
         """Returns all possible values within a column of categorical data."""
 
-        assert isinstance(self._df[col].dtype, pd.CategoricalDtype)
-        return self._df[col].cat.categories.to_list()
+        assert isinstance(self.__df[col].dtype, pd.CategoricalDtype)
+        return self.__df[col].cat.categories.to_list()
 
     def get_patch_by_index(self, index: int) -> pd.Series:
         """Returns the full patch (meta + params) at the specified index in the database."""
 
-        return self._df.iloc[index]
+        return self.__df.iloc[index]
 
     def write_patch(self, index, typ, path):
         """Writes the patch at `index` to a file of type `typ` (either `FXP_CHUNK`, `FXP_PARAMS`, or `PATCH_FILE`)
@@ -247,9 +247,9 @@ class PatchDatabase:
             def apply(row):
                 return encode_tags(tag, row['tags'])
 
-            mask = self._df[col].str.contains(
+            mask = self.__df[col].str.contains(
                 pattern, regex=True, flags=re.IGNORECASE)
-            self._df.loc[mask, 'tags'] = self._df.loc[mask].apply(
+            self.__df.loc[mask, 'tags'] = self.__df.loc[mask].apply(
                 apply, axis=1)
 
     @volatile_db
@@ -260,8 +260,8 @@ class PatchDatabase:
         if replace:
             old_tags = ''
         else:
-            old_tags = self._df.iloc[index]['tags']
-        self._df.iloc[index]['tags'] = encode_tags(tags, old_tags)
+            old_tags = self.__df.iloc[index]['tags']
+        self.__df.iloc[index]['tags'] = encode_tags(tags, old_tags)
 
 
 def tags_to_list(tags: str) -> list:

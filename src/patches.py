@@ -63,11 +63,11 @@ class PatchSchema:
             f.write(self.file_syntax % to_write)
 
     def sanity_check(self, file: str) -> Union[str, bool]:
-        """TBD. This function should correct and return an improperly formatted patch file, or `False` if the file
+        """TBD. This function should correct an improperly formatted patch file, or return `False` if the file
         can't be formatted. """
         return file
 
-    def _unformat(self, s: str, param: bool = False) -> dict:
+    def __unformat(self, s: str, param: bool = False) -> dict:
         """Un-formats a string formatted according to `self.file_syntax`."""
 
         if param:
@@ -96,12 +96,12 @@ class PatchSchema:
 
         if patchfile:
             try:
-                vals = self._unformat(patchfile)
+                vals = self.__unformat(patchfile)
                 raw_params = vals['params'].split(self.param_delimiter)
                 params = [nan] * self.num_params
 
                 for p in raw_params:
-                    pdict = self._unformat(p, param=True)
+                    pdict = self.__unformat(p, param=True)
                     if pdict.get('index') is None:
                         ind = self.params.index(pdict['name'])
                     else:

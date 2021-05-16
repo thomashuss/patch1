@@ -245,13 +245,12 @@ class PatchDatabase:
         with the dictionary key of the matching expression. """
 
         for tag, pattern in re_defs.items():
-            def apply(row):
-                return encode_tags(tag, row['tags'])
+            def apply(my_tags):
+                return encode_tags(tag, my_tags)
 
             mask = self.__df[col].str.contains(
                 pattern, regex=True, flags=re.IGNORECASE)
-            self.__df.loc[mask, 'tags'] = self.__df.loc[mask].apply(
-                apply, axis=1)
+            self.__df.loc[mask, 'tags'] = np.vectorize(apply)(self.__df.loc[mask]['tags'])
 
     @volatile_db
     def change_tags(self, index: int, tags: list, replace: bool = True):

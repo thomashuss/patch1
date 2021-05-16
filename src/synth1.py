@@ -159,3 +159,6 @@ class Synth1(PatchSchema):
                 max(0, min(1, (params[ind] + PARAM_SNOWFLAKES.get(ind, 0)) / PARAM_RANGE[ind])))
 
         return fxparams
+
+
+__all__ = ['Synth1']

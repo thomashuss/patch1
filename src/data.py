@@ -82,6 +82,7 @@ class PatchDatabase:
 
         self.__df = meta_df.join(param_df)
 
+    # noinspection PyTypeChecker
     def from_disk(self, path: Path):
         """Loads a database from the directory `path`."""
 

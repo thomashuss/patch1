@@ -129,3 +129,6 @@ class PatchSchema:
         """TBD. This function should convert a list of parameter values in original format to FXP parameter values (
         0-1 float). """
         pass
+
+
+__all__ = ['PatchSchema']

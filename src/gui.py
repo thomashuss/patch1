@@ -282,9 +282,9 @@ class AppGui(App, ttk.Frame):
         self.root.config(cursor='')
         self.busy_state(tk.NORMAL)
 
-    def put_patch(self, patch: PatchMetadata):
-        self.patch_list.insert('', patch.index, patch.index, values=(
-            patch.name, patch.tags), tags=(patch.color))
+    def put_patch(self, patch):
+        self.patch_list.insert('', patch.name, patch.name, values=(
+            patch['patch_name'], patch['tags']), tags=(patch['color']))
 
     def empty_patches(self):
         """Empties the patch Treeview."""

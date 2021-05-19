@@ -2,7 +2,7 @@ import re
 from pathlib import Path
 from typing import Type, Union
 from numpy import nan
-from src.common import *
+from src.common import FILE_ENC
 
 META_COLS = ['patch_name', 'bank', 'tags']
 
@@ -16,24 +16,24 @@ class PatchSchema:
     file_base: str  # What to put to the left of the "." in a temporary patch file name
     file_ext: str  # Extension of a patch file
 
-    metas: list[str]  # Names of all metadata types
+    metas: list[str]  # Names of all metadata types specific to this schema, not including the patch's name.
     defaults: list  # Ordered default values of metadata
     # Possible values for any ranged metadata values
     possibilites: dict[str, list]
 
     params: list[str]  # Names of parameters
     param_dtype: Type  # Data type of parameter values
-    # This will be set in __init__; total number of parameters
+    # This will be filled automatically; total number of parameters
     num_params: int
     values: list  # Ordered defaults for parameters
 
-    # Basic fstring-like syntax of a patch file, must contain {name} and {params} along with any other metadata (
-    # NOTE: for right now, {params} must be at the end of the file)
+    # Basic fstring-like syntax of a patch file, must contain {name} and {params} along with any other metadata
+    # (NOTE: for right now, {params} must be at the end of the file)
     file_syntax: str
     # Basic fstring-like syntax of a parameter within a patch file, must contain either {name} or {index},
     # along with a {value}
     file_param: str
-    # Character(s) that denote a parameter within a patch file
+    # Character(s) that separate parameters within a patch file
     param_delimiter: str
 
     def __init__(self):
@@ -42,10 +42,12 @@ class PatchSchema:
             self.file_base = 'patch'
 
         brackets_re = re.compile(r'[{}]')
-        self._file_layout = brackets_re.split(self.file_syntax)
-        self._param_layout = brackets_re.split(self.file_param)
-        if not (len(self._file_layout) % 2 and len(self._param_layout) % 2):
+        self.__file_layout = brackets_re.split(self.file_syntax)
+        self.__param_layout = brackets_re.split(self.file_param)
+        if not (len(self.__file_layout) % 2 and len(self.__param_layout) % 2):
             raise ValueError('Improperly formatted patch file syntax')
+
+        self.meta_cols = self.metas + ['patch_name', 'tags']
 
     def write_patchfile(self, patch, path):
         """Writes the patch in original format at the path."""
@@ -68,12 +70,12 @@ class PatchSchema:
         return file
 
     def __unformat(self, s: str, param: bool = False) -> dict:
-        """Un-formats a string formatted according to `self.file_syntax`."""
+        """Internal use only. Un-formats a string formatted according to `self.file_syntax`."""
 
         if param:
-            layout = self._param_layout
+            layout = self.__param_layout
         else:
-            layout = self._file_layout
+            layout = self.__file_layout
 
         vals = dict()
         f_index = 0
@@ -126,8 +128,8 @@ class PatchSchema:
         pass
 
     def make_fxp_params(self, params) -> list:
-        """TBD. This function should convert a list of parameter values in original format to FXP parameter values (
-        0-1 float). """
+        """TBD. This function should convert a list of parameter values in original format to FXP parameter values
+        (0-1 float). """
         pass
 
 

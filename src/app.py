@@ -1,6 +1,5 @@
 import configparser
 from pathlib import Path
-from typing import NamedTuple
 from src.data import *
 from src.sorting import TAGS_NAMES
 from src.common import *
@@ -29,29 +28,13 @@ STATUS_MSGS = {
 }
 
 
-class PatchMetadata(NamedTuple):
-    """Abstract metadata for a single patch."""
-
-    index: int
-    name: str
-    bank: str
-    color: str
-    tags: str
-
-    @classmethod
-    def from_patch(cls, patch):
-        """Constructs a new `PatchMetadata` object from the `patch`."""
-
-        return cls(patch.name, patch['patch_name'], patch['bank'], patch['color'], tags_to_str(patch['tags']))
-
-
 def searcher(func):
     """Wrapper for functions that perform searches."""
 
     def inner(self, q):
         if len(q) > 0 and self.last_query != q:
-            self.last_query = q
             self.status(STATUS_SEARCH)
+            self.last_query = q
             func(self, q)
             self.search_done()
             self.unwait()
@@ -102,48 +85,40 @@ class App:
         self.load_config()
         self.status(STATUS_READY)
 
-    def _put_patch(self, patch):
-        """Internal use only"""
-
-        self.put_patch(PatchMetadata.from_patch(patch))
-
     def info(self, msg: str):
         """Define this. It should display an informational message to the user."""
-        pass
+        ...
 
     def err(self, msg: str):
         """Define this. It should display an error message to the user."""
-        pass
+        ...
 
-    def put_patch(self, patch: PatchMetadata):
+    def put_patch(self, patch):
         """Define this. It should add the `patch` to a list of patches visible to the user."""
-        pass
+        ...
 
     def wait(self):
         """Define this. It should inform the user that the program is busy."""
-        pass
+        ...
 
     def unwait(self):
         """Define this. It should inform the user that the program is no longer busy."""
-        pass
+        ...
 
     def empty_patches(self):
         """Define this. It should empty the user-facing list of patches."""
-        pass
+        ...
 
     def search_done(self):
         """Define this. It's called whenever a search is finished."""
-        pass
+        ...
 
     def update_meta(self) -> list:
         """This should update the user-facing metadata list with the return value of the super function."""
 
         if self.active_patch > -1:
-            patch = self.by_index(self.active_patch)
             return [
-                'Name:', patch.name, '',
-                'Bank:', patch.bank, '',
-                'Tags:', patch.tags, ''
+                'fix', 'me'
             ]
         else:
             return []
@@ -152,20 +127,20 @@ class App:
     def search_by_tags(self, tags: list):
         """Searches for patches matching `tags`."""
 
-        self.__db.find_patches_by_tags(tags).apply(self._put_patch, axis=1)
+        self.__db.find_patches_by_tags(tags).apply(self.put_patch, axis=1)
 
     @searcher
     def search_by_bank(self, bank: str):
         """Searches for patches in bank `bank`."""
 
         self.__db.find_patches_by_val(
-            bank, 'bank', exact=True).apply(self._put_patch, axis=1)
+            bank, 'bank', exact=True).apply(self.put_patch, axis=1)
 
     @searcher
     def keyword_search(self, kwd: str):
         """Searches for patches matching keyword `kwd`."""
 
-        self.__db.keyword_search(kwd).apply(self._put_patch, axis=1)
+        self.__db.keyword_search(kwd).apply(self.put_patch, axis=1)
 
     def refresh(self):
         """Refreshes cached indexes."""
@@ -200,6 +175,7 @@ class App:
             self.unwait()
         else:
             self.empty_patches()
+            self.last_query = ''
             self.wait()
 
     @reloads
@@ -265,11 +241,6 @@ class App:
 
         self.__db.write_patch(ind, self.__config.get('synth_interface', 'quick_export_as'), self.quick_tmp)
 
-    def by_index(self, ind: int) -> PatchMetadata:
-        """Returns the patch at index `ind`."""
-
-        return PatchMetadata.from_patch(self.__db.get_patch_by_index(ind))
-
     def end(self):
         """Housekeeping before exiting the program."""
 
@@ -281,4 +252,4 @@ class App:
         self.quick_tmp.unlink(missing_ok=True)
 
 
-__all__ = ['App', 'PatchMetadata', 'STATUS_MSGS']
+__all__ = ['App', 'STATUS_MSGS']

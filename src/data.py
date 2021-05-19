@@ -8,7 +8,6 @@ from src.common import *
 from src.patches import PatchSchema
 from src.preset2fxp import *
 
-_TAGS_SEP = '|'
 FXP_CHUNK = 'chunk'
 FXP_PARAMS = 'params'
 DB_FILE = 'db'
@@ -54,8 +53,7 @@ class PatchDatabase:
         """Creates a new database from the contents of the specified directory and loads the database."""
 
         re_file = re.compile(self.schema.file_pattern)
-        files = filter(lambda f: re_file.match(f.name)
-                       is not None, root_dir.glob('**/*'))
+        files = filter(lambda f: re_file.match(f.name) is not None, root_dir.glob('**/*'))
 
         meta = []
         params = []
@@ -81,6 +79,7 @@ class PatchDatabase:
             meta_df[col] = pd.Categorical(meta_df[col], categories=pos)
 
         self.__df = meta_df.join(param_df)
+        self.__tags = pd.DataFrame(index=self.__df.index, dtype='bool')
 
     # noinspection PyTypeChecker
     def from_disk(self, path: Path):
@@ -117,16 +116,46 @@ class PatchDatabase:
 
         return self.__df is not None
 
-    def refresh(self, _tags_df: pd.DataFrame = None):
+    def refresh(self):
         """Rebuilds cached indexes for the active database."""
 
-        if _tags_df is None:
-            self.__tags = self.__df['tags'].str.get_dummies(_TAGS_SEP)
-            self.tags = self.__tags.columns.to_list()
-        else:
-            self.__tags = _tags_df
-            self.tags = self.__tags.columns.to_list()
+        self.tags = self.__tags.columns.to_list()
         self.banks = self.get_categories('bank')
+
+    def __return_df(self, mask):
+        """Returns a `DataFrame` composed of metadata from the patches in the database represented by the Boolean mask
+        `mask`."""
+
+        return self.__df.loc[mask][self.schema.meta_cols]
+
+    def find_patches_by_val(self, find: str, col: str, exact=False, regex=False) -> pd.DataFrame:
+        """Finds patches in the database matching `find` value in column `col`, either as a substring (`exact=False`),
+        an exact match (`exact=True`), or a regular expression (`regex=True`)."""
+
+        if exact:
+            mask = self.__df[col] == find
+        else:
+            mask = self.__df[col].str.contains(find, case=False, regex=regex)
+
+        return self.__return_df(mask)
+
+    def keyword_search(self, kwd: str) -> pd.DataFrame:
+        """Finds metadata of patches in the database whose name matches the specified keyword query."""
+
+        return self.find_patches_by_val(kwd, 'patch_name')
+
+    def find_patches_by_tags(self, tags: list) -> pd.DataFrame:
+        """Finds patches in the database tagged with (at least) each tag in `tags`."""
+
+        # create masks for each tag, unpack into list, take logical and,
+        # reduce into single mask, return slice of dataframe with that mask
+        return self.__return_df(np.logical_and.reduce([*(self.__tags[tag] == True for tag in tags)]))
+
+    def get_categories(self, col: str) -> list:
+        """Returns all possible values within a column of categorical data."""
+
+        assert isinstance(self.__df[col].dtype, pd.CategoricalDtype)
+        return self.__df[col].cat.categories.to_list()
 
     def train_classifier(self) -> float:
         """Constructs a k-nearest neighbors classifier for patches based on their parameters. The classifier is not
@@ -137,15 +166,13 @@ class PatchDatabase:
         from sklearn.preprocessing import StandardScaler
         from sklearn.model_selection import train_test_split
 
-        tagged_mask = self.__df['tags'] != ''
+        tagged_mask = self.__tags.any(axis=1)
         df = self.__df.loc[tagged_mask]
         if len(df) == 0:
             raise Exception('Add some tags and try again.')
-        df_slice = df[self.schema.params]
 
-        indicators = self.__tags[tagged_mask]
-        X = df_slice.to_numpy()
-        y = indicators.to_numpy()
+        X = df[self.schema.params].to_numpy()
+        y = self.__tags[tagged_mask].fillna(False).to_numpy(dtype='bool')
 
         X_train, X_test, y_train, y_test = train_test_split(X, y)
         self.__knn = Pipeline([('scaler', StandardScaler()), ('knn', KNeighborsClassifier(
@@ -158,51 +185,46 @@ class PatchDatabase:
         """Tags patches based on their parameters using the previously generated classifier model."""
 
         assert self.__knn is not None, 'Please create a classifier model first.'
-        predictions = self.__knn.predict(
+
+        self.__tags = self.__tags.fillna(False)
+        self.__tags |= self.__knn.predict(
             self.__df[self.schema.params].to_numpy())
 
-        def classify(patch: pd.Series) -> str:
-            prediction = predictions[int(patch.name)]
-            tags = [self.tags[i] for i in np.asarray(prediction).nonzero()[0]]
-            return encode_tags(tags, patch['tags'])
+        self.__update_tags()
 
-        self.__df['tags'] = self.__df.apply(classify, axis=1)
+    @volatile_db
+    def tags_from_val_defs(self, re_defs: dict, col: str):
+        """Tags patches in the database, where the patch's `col` value matches a regular expression in `re_defs`,
+        with the dictionary key of the matching expression. """
 
-    def find_patches_by_val(self, find: str, col: str, exact=False, regex=False) -> pd.DataFrame:
-        """Finds patches in the database matching `find` value in column `col`, either as a substring (`exact=False`),
-        an exact match (`exact=True`), or a regular expression (`regex=True`). Returns a
-        sliced `DataFrame`."""
+        for tag, pattern in re_defs.items():
+            mask = self.__df[col].str.contains(
+                pattern, regex=True, flags=re.IGNORECASE)
 
-        if exact:
-            mask = self.__df[col] == find
+            self.__tags.loc[mask, tag] = True
+
+        self.__tags = self.__tags.fillna(False)
+        self.__update_tags()
+
+    @volatile_db
+    def change_tags(self, index: int, tags: list, replace: bool = True):
+        """Changes the tags of the patch at `index` to `tags`. If `replace` is `False`, `tags` will be added to the
+        patch's existing tags. """
+
+        if replace:
+            self.__tags.loc[index, :] = False
+
+        self.__tags.loc[index, tags] = True
+        self.__update_tags(index)
+
+    def __update_tags(self, index=None):
+        """Internal use only. Updates the stringified tags for the patch at `index`, or the entire database."""
+
+        if index is not None:
+            patch = self.__tags.iloc[index]
+            self.__df.loc[index, 'tags'] = ', '.join(patch[patch == 1].index)
         else:
-            mask = self.__df[col].str.contains(find, case=False, regex=regex)
-
-        return self.__df.loc[mask]
-
-    def find_patches_by_tags(self, tags: list) -> pd.DataFrame:
-        """Finds patches in the database tagged with (at least) each specified tag. Returns a sliced `DataFrame`."""
-
-        # create masks for each tag, unpack into list, take logical and,
-        # reduce into single mask, return slice of dataframe with that mask
-        return self.__df.loc[np.logical_and.reduce([*(self.__tags[tag] == 1 for tag in tags)])]
-
-    def keyword_search(self, kwd: str) -> pd.DataFrame:
-        """Finds metadata of patches in the database whose name matches the specified keyword query. Returns a
-        sliced `DataFrame`."""
-
-        return self.find_patches_by_val(kwd, 'patch_name')
-
-    def get_categories(self, col: str) -> list:
-        """Returns all possible values within a column of categorical data."""
-
-        assert isinstance(self.__df[col].dtype, pd.CategoricalDtype)
-        return self.__df[col].cat.categories.to_list()
-
-    def get_patch_by_index(self, index: int) -> pd.Series:
-        """Returns the full patch (meta + params) at the specified index in the database."""
-
-        return self.__df.iloc[index]
+            self.__df['tags'] = self.__tags.apply(lambda row: ', '.join(row[row == True].index), axis=1)
 
     def write_patch(self, index, typ, path):
         """Writes the patch at `index` to a file of type `typ` (either `FXP_CHUNK`, `FXP_PARAMS`, or `PATCH_FILE`)
@@ -211,7 +233,7 @@ class PatchDatabase:
         if not isinstance(path, Path):
             path = Path(path)
 
-        patch = self.get_patch_by_index(index)
+        patch = self.__df.iloc[index]
 
         if path.is_dir():
             # If given a dir rather than a file, auto name the file
@@ -239,59 +261,5 @@ class PatchDatabase:
 
             write_fxp(preset, str(path))
 
-    @volatile_db
-    def tags_from_val_defs(self, re_defs: dict, col: str):
-        """Tags patches in the database, where the patch's `col` value matches a regular expression in `re_defs`,
-        with the dictionary key of the matching expression. """
 
-        for tag, pattern in re_defs.items():
-            def apply(my_tags):
-                return encode_tags(tag, my_tags)
-
-            mask = self.__df[col].str.contains(
-                pattern, regex=True, flags=re.IGNORECASE)
-            self.__df.loc[mask, 'tags'] = np.vectorize(apply)(self.__df.loc[mask]['tags'])
-
-    @volatile_db
-    def change_tags(self, index: int, tags: list, replace: bool = True):
-        """Changes the tags of the patch at `index` to `tags`. If `replace` is `False`, `tags` will be added to the
-        patch's existing tags. """
-
-        if replace:
-            old_tags = ''
-        else:
-            old_tags = self.__df.iloc[index]['tags']
-        self.__df.iloc[index]['tags'] = encode_tags(tags, old_tags)
-
-
-def tags_to_list(tags: str) -> list:
-    """Returns the properly formatted (ragged) string of tags as a list."""
-
-    return _TAGS_SEP.split(tags)
-
-
-def tags_to_str(tags: str, sep: str = ', ') -> str:
-    """Returns the properly formatted (ragged) string of tags as a string with the specified delimeter."""
-
-    return tags.replace(_TAGS_SEP, sep)
-
-
-def encode_tags(tags, old_tags: str = '') -> str:
-    """Adds `tags` to `old_tags`, which is either a pre-defined properly formatted string of tags or a blank
-    string, and returns a properly formatted (ragged) string of tags. Only duplicates across `tags` and `old_tags`
-    will be corrected, and it is assumed that neither parameter has its own duplicates, though nothing particularly
-    bad will happen if there are."""
-
-    if isinstance(tags, str):
-        tags = [tags]
-
-    if len(old_tags) > 0:
-        old_tagsl = old_tags.split(_TAGS_SEP)
-        tags = list(filter(lambda tag: tag not in old_tagsl, tags))
-        old_tags = old_tags + (_TAGS_SEP if len(tags) > 0 else '')
-
-    return old_tags + _TAGS_SEP.join(tags)
-
-
-__all__ = ['PatchDatabase', 'tags_to_list', 'tags_to_str',
-           'FXP_CHUNK', 'FXP_PARAMS', 'PATCH_FILE']
+__all__ = ['PatchDatabase', 'FXP_CHUNK', 'FXP_PARAMS', 'PATCH_FILE']

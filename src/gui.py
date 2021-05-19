@@ -263,10 +263,21 @@ class AppGui(App, ttk.Frame):
             w.config(state=state)
 
     def clear_selection(self):
-        """Clears all currently selected items in the search pane."""
+        """Clears all currently selected items in the search pane listboxes."""
 
         for lb in (self.tags_lb, self.banks_lb):
             lb.selection_clear(0, tk.END)
+
+    def clear_keyword(self):
+        """Clears the keyword search box."""
+
+        self.kwd_entry.delete(0, tk.END)
+
+    def clear_search(self):
+        """Clears the search pane."""
+
+        self.clear_selection()
+        self.clear_keyword()
 
     def wait(self):
         """Informs the user that the program is busy."""
@@ -338,7 +349,7 @@ class AppGui(App, ttk.Frame):
         """Refreshes the GUI to reflect new cached data."""
 
         super().refresh()
-        self.clear_selection()
+        self.clear_search()
         self.tags_list.set(self.tags)
         self.banks_list.set(self.banks)
 
@@ -346,6 +357,7 @@ class AppGui(App, ttk.Frame):
     def search_by_tags(self):
         """Searches for patches matching the currently selected tag(s) in the tags `Listbox`."""
 
+        self.clear_keyword()
         super().search_by_tags([self.tags_lb.get(i)
                                 for i in self.tags_lb.curselection()])
 
@@ -353,6 +365,7 @@ class AppGui(App, ttk.Frame):
     def search_by_bank(self):
         """Searches for patches belonging to the currently selected bank in the banks `Listbox`."""
 
+        self.clear_keyword()
         super().search_by_bank(self.banks_lb.get(
             self.banks_lb.curselection()[0]))
 

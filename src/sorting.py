@@ -56,6 +56,6 @@ TAGS_NAMES = {
     'Voice': r'choir|voice|voc(?!oder)|vox|goblin',
     'Wah': r'wah',
     'Whistle': r'whistl',
-    'Wind': r'wi?nd|clarinet|flute|piccolo|recorder',
+    'Wind': r'wi?nd|clarinet|flute|piccolo|recorder|bassoon',
     'Wood': r'wood',
 }

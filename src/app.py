@@ -15,6 +15,7 @@ DEFAULT_CONFIG = {
         'export_to': Path.home()
     }
 }
+
 TMP_FXP_NAME = '%s_tmp.%s' % (APP_NAME_INLINE, FXP_FILE_EXT)
 
 STATUS_MSGS = {
@@ -26,6 +27,9 @@ STATUS_MSGS = {
     STATUS_SEARCH: 'Searching...',
     STATUS_WAIT: 'Working...'
 }
+
+CONFIG_FILE = 'config.ini'
+DB_FILE = 'db'
 
 
 def searcher(func):
@@ -82,7 +86,8 @@ class App:
         self.status(STATUS_OPEN)
 
         self.__data_dir = Path.home() / ('.%s' % APP_NAME_INLINE)
-        self.__config_file = self.__data_dir / 'config.ini'
+        self.__config_file = self.__data_dir / CONFIG_FILE
+        self.__db_file = self.__data_dir / DB_FILE
         self.schema = schema
         self.__db = PatchDatabase(self.schema)
         self.__config = configparser.ConfigParser()
@@ -199,12 +204,12 @@ class App:
         if not isinstance(path, Path):
             path = Path(path)
 
-        if path.is_dir():
+        if path.is_file():
             try:
                 self.__db.from_disk(path)
             except:
                 if not silent:
-                    raise Exception('That is not a valid data folder.')
+                    raise Exception('That is not a valid data file.')
 
     def save_database(self, path):
         """Saves the active database to disk."""
@@ -230,7 +235,7 @@ class App:
         self.quick_tmp.touch(exist_ok=True)
 
         if self.__config.getboolean('database', 'auto_load'):
-            self.open_database(self.__data_dir, silent=True)
+            self.open_database(self.__db_file, silent=True)
 
     def export_patch(self, ind: int, typ=PATCH_FILE, path=None):
         """Exports the patch at index `ind`."""
@@ -252,7 +257,7 @@ class App:
         """Housekeeping before exiting the program."""
 
         if self.__config.getboolean('database', 'auto_save'):
-            self.save_database(self.__data_dir)
+            self.save_database(self.__db_file)
 
         with open(self.__config_file, 'w') as cfile:
             self.__config.write(cfile)

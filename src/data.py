@@ -10,7 +10,6 @@ from src.preset2fxp import *
 
 FXP_CHUNK = 'chunk'
 FXP_PARAMS = 'params'
-DB_FILE = 'db'
 DB_KEY = 'patches'
 TAGS_KEY = 'tags'
 PATCH_FILE = 'patch'
@@ -82,13 +81,10 @@ class PatchDatabase:
         self.__tags = pd.DataFrame(index=self.__df.index, dtype='bool')
 
     # noinspection PyTypeChecker
-    def from_disk(self, path: Path):
-        """Loads a database from the directory `path`."""
+    def from_disk(self, file):
+        """Loads a database from the `file`."""
 
-        if not isinstance(path, Path):
-            path = Path(path)
-
-        store = pd.HDFStore(str(path / DB_FILE), mode='r')
+        store = pd.HDFStore(str(file), mode='r')
         self.__df = store.get(DB_KEY)
 
         try:
@@ -99,14 +95,11 @@ class PatchDatabase:
 
         self.refresh()
 
-    def to_disk(self, path: Path):
-        """Saves the active database to the directory `path`."""
-
-        if not isinstance(path, Path):
-            path = Path(path)
+    def to_disk(self, file):
+        """Saves the active database to the `file`."""
 
         if self.modified_db:
-            store = pd.HDFStore(str(path / DB_FILE), mode='w')
+            store = pd.HDFStore(str(file), mode='w')
             store.put(DB_KEY, self.__df, format='table')
             store.put(TAGS_KEY, self.__tags)
             store.close()
@@ -172,7 +165,9 @@ class PatchDatabase:
             raise Exception('Add some tags and try again.')
 
         X = df[self.schema.params].to_numpy()
-        y = self.__tags[tagged_mask].fillna(False).to_numpy(dtype='bool')
+
+        self.__tags = self.__tags.fillna(False)
+        y = self.__tags[tagged_mask].to_numpy(dtype='bool')
 
         X_train, X_test, y_train, y_test = train_test_split(X, y)
         self.__knn = Pipeline([('scaler', StandardScaler()), ('knn', KNeighborsClassifier(
@@ -186,10 +181,8 @@ class PatchDatabase:
 
         assert self.__knn is not None, 'Please create a classifier model first.'
 
-        self.__tags = self.__tags.fillna(False)
         self.__tags |= self.__knn.predict(
             self.__df[self.schema.params].to_numpy())
-
         self.__update_tags()
 
     @volatile_db

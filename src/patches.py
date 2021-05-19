@@ -47,7 +47,7 @@ class PatchSchema:
         if not (len(self.__file_layout) % 2 and len(self.__param_layout) % 2):
             raise ValueError('Improperly formatted patch file syntax')
 
-        self.meta_cols = self.metas + ['patch_name', 'tags']
+        self.meta_cols = self.metas + ['patch_name', 'tags', 'bank']
 
     def write_patchfile(self, patch, path):
         """Writes the patch in original format at the path."""

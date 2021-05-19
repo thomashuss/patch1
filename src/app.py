@@ -67,6 +67,7 @@ class App:
     quick_tmp: Path  # Temporary file for quick export
     active_patch: int = -1  # Index in db of currently active patch
     last_query = ''  # Last search query, to avoid redundant queries
+    last_result = None
 
     tags = []  # tag indexes for active database
     banks = []  # bank indexes for active database
@@ -117,8 +118,11 @@ class App:
         """This should update the user-facing metadata list with the return value of the super function."""
 
         if self.active_patch > -1:
+            patch = self.last_result.loc[self.active_patch]
             return [
-                'fix', 'me'
+                'Name:', patch['patch_name'], '',
+                'Bank:', patch['bank'], '',
+                'Tags:', patch['tags'], ''
             ]
         else:
             return []
@@ -127,7 +131,8 @@ class App:
     def search_by_tags(self, tags: list):
         """Searches for patches matching `tags`."""
 
-        self.__db.find_patches_by_tags(tags).apply(self.put_patch, axis=1)
+        self.last_result = self.__db.find_patches_by_tags(tags)
+        self.last_result.apply(self.put_patch, axis=1)
 
     @searcher
     def search_by_bank(self, bank: str):

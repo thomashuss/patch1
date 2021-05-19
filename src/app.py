@@ -34,8 +34,12 @@ def searcher(func):
     def inner(self, q):
         if len(q) > 0 and self.last_query != q:
             self.status(STATUS_SEARCH)
+
             self.last_query = q
-            func(self, q)
+            self.last_result = func(self, q)
+
+            self.last_result.apply(self.put_patch, axis=1)
+
             self.search_done()
             self.unwait()
             return True
@@ -131,21 +135,19 @@ class App:
     def search_by_tags(self, tags: list):
         """Searches for patches matching `tags`."""
 
-        self.last_result = self.__db.find_patches_by_tags(tags)
-        self.last_result.apply(self.put_patch, axis=1)
+        return self.__db.find_patches_by_tags(tags)
 
     @searcher
     def search_by_bank(self, bank: str):
         """Searches for patches in bank `bank`."""
 
-        self.__db.find_patches_by_val(
-            bank, 'bank', exact=True).apply(self.put_patch, axis=1)
+        return self.__db.find_patches_by_val(bank, 'bank', exact=True)
 
     @searcher
     def keyword_search(self, kwd: str):
         """Searches for patches matching keyword `kwd`."""
 
-        self.__db.keyword_search(kwd).apply(self.put_patch, axis=1)
+        return self.__db.keyword_search(kwd)
 
     def refresh(self):
         """Refreshes cached indexes."""

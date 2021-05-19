@@ -6,7 +6,7 @@ TAGS_NAMES = {
     'Acoustic': r'acoustic',
     'Air': r'\bair',
     'Arp': r'([^h]|\b)arp|peggi',
-    'Bass': r'bass|\bba?s?\b',
+    'Bass': r'^((?!drum).)*bass(?!oon)|\bb[as]\b',
     'Bell': r'bell(s|z|\b)',
     'Brass': r'bra?s|horn|trumpet|trombone',
     'Breath': r'breath',

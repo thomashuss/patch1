@@ -213,12 +213,12 @@ class PatchDatabase:
     def __update_tags(self, index=None):
         """Internal use only. Updates the stringified tags for the patch at `index`, or the entire database."""
 
+        sep = ', '
+        cols = self.__tags.columns
         if index is not None:
             patch = self.__tags.iloc[index]
-            self.__df.loc[index, 'tags'] = ', '.join(patch[patch == 1].index)
+            self.__df.loc[index, 'tags'] = sep.join(cols[patch])
         else:
-            cols = self.__tags.columns
-            sep = ', '
             self.__df['tags'] = self.__tags.apply(lambda row: sep.join(cols[row]), axis=1)
 
     def write_patch(self, index, typ, path):

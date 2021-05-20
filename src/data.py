@@ -217,7 +217,8 @@ class PatchDatabase:
             patch = self.__tags.iloc[index]
             self.__df.loc[index, 'tags'] = ', '.join(patch[patch == 1].index)
         else:
-            self.__df['tags'] = self.__tags.apply(lambda row: ', '.join(row[row == True].index), axis=1)
+            cols = self.__tags.columns
+            self.__df['tags'] = self.__tags.apply(lambda row: ', '.join(cols[row]), axis=1)
 
     def write_patch(self, index, typ, path):
         """Writes the patch at `index` to a file of type `typ` (either `FXP_CHUNK`, `FXP_PARAMS`, or `PATCH_FILE`)

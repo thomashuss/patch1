@@ -1,4 +1,5 @@
 import os
+import sys
 import tkinter as tk
 import webbrowser
 from pathlib import Path
@@ -50,11 +51,12 @@ def scrollbars(master, box, draw_x=True, draw_y=True):
 def path_to_dnd(path: Path) -> str:
     """Converts a `Path` into an acceptable value for `tkinterdnd2.`"""
 
-    if os.path.sep == '/':
+    # tkinterdnd2 will only accept fs paths with forward slashes, even on Windows.
+    wants_sep = '/'
+    if os.path.sep == wants_sep:
         return str(path)
     else:
-        # tkinterdnd will only accept forward slash sep
-        return '/'.join(str(path).split(os.path.sep))
+        return wants_sep.join(str(path).split(os.path.sep))
 
 
 def searcher(func):
@@ -186,6 +188,17 @@ class AppGui(App, ttk.Frame):
         patches_pane = ttk.Frame(self.master)
         patches_pane.pack(**PANE_PACKWARGS)
         paned_win.add(patches_pane, stretch='always')
+
+        # Foreground colors set in Treeview tags don't work on Windows with Tk 8.6.9.
+        # Python 3.10 and newer have an updated version of Tk where this bug is no longer present.
+        # Bug and fix described here: https://bugs.python.org/issue36468
+        if sys.platform == 'win32' and sys.version_info.major == 3 and sys.version_info.minor < 10:
+            def fixed_map(option):
+                return [elm for elm in style.map('Treeview', query_opt=option) if
+                        elm[:2] != ('!disabled', '!selected')]
+
+            style = ttk.Style()
+            style.map('Treeview', foreground=fixed_map('foreground'), background=fixed_map('background'))
 
         self.patch_list = ttk.Treeview(patches_pane, columns=(
             'name', 'patch_tags'), show='headings', style='patchList.Treeview')

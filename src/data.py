@@ -152,7 +152,7 @@ class PatchDatabase:
 
     def train_classifier(self) -> float:
         """Constructs a k-nearest neighbors classifier for patches based on their parameters. The classifier is not
-        intended to persist across sessions. Returns the accuracy of the classifier. """
+        intended to persist across sessions. Returns the accuracy of the classifier."""
 
         from sklearn.pipeline import Pipeline
         from sklearn.neighbors import KNeighborsClassifier
@@ -188,7 +188,7 @@ class PatchDatabase:
     @volatile_db
     def tags_from_val_defs(self, re_defs: dict, col: str):
         """Tags patches in the database, where the patch's `col` value matches a regular expression in `re_defs`,
-        with the dictionary key of the matching expression. """
+        with the dictionary key of the matching expression."""
 
         for tag, pattern in re_defs.items():
             mask = self.__df[col].str.contains(
@@ -202,7 +202,7 @@ class PatchDatabase:
     @volatile_db
     def change_tags(self, index: int, tags: list, replace: bool = True):
         """Changes the tags of the patch at `index` to `tags`. If `replace` is `False`, `tags` will be added to the
-        patch's existing tags. """
+        patch's existing tags."""
 
         if replace:
             self.__tags.loc[index, :] = False
@@ -222,8 +222,8 @@ class PatchDatabase:
             self.__df['tags'] = self.__tags.apply(lambda row: sep.join(cols[row]), axis=1)
 
     def write_patch(self, index, typ, path):
-        """Writes the patch at `index` to a file of type `typ` (either `FXP_CHUNK`, `FXP_PARAMS`, or `PATCH_FILE`)
-        into a file at `path`. """
+        """Writes the patch at `index` into a file of type `typ` (either `FXP_CHUNK`, `FXP_PARAMS`, or `PATCH_FILE`)
+        at `path`."""
 
         if not isinstance(path, Path):
             path = Path(path)

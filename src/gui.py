@@ -12,9 +12,6 @@ from src.common import *
 from src.patches import PatchSchema
 from src.synth1 import Synth1
 
-INFO_TAB = 'info'
-MISC_META_TAB = 'meta'
-
 # Arguments for packing panedwindow panes and *most* widgets inside of them.
 PANE_PACKWARGS = {'fill': tk.BOTH, 'side': tk.LEFT,
                   'expand': True, 'anchor': tk.W}
@@ -30,7 +27,10 @@ LB_KWARGS = {'selectbackground': '#d6be48',
              'activestyle': tk.NONE, 'width': 25}
 
 # Common properties of open/save dialogs
-FILE_KWARGS = {'filetypes': (('All files', '*')), 'initialdir': str(Path.home())}
+FILE_KWARGS = {'filetypes': (('All files', '*'),), 'initialdir': str(Path.home())}
+
+ALWAYS = 'always'
+NEVER = 'never'
 
 
 def scrollbars(master, box, draw_x=True, draw_y=True):
@@ -70,6 +70,16 @@ def searcher(func):
             # An event handler for listbox selection can be called even when
             # nothing is selected, so silently ignore it.
             pass
+
+    return inner
+
+
+def check_active(func):
+    """Wrapper for functions that verify a patch is currently loaded."""
+
+    def inner(self, *args):
+        if self.active_patch > -1:
+            return func(self, *args)
 
     return inner
 
@@ -139,7 +149,7 @@ class AppGui(App, ttk.Frame):
 
         self.search_pane = ttk.Frame(self.master)
         self.search_pane.pack(**PANE_PACKWARGS)
-        paned_win.add(self.search_pane, stretch='never')
+        paned_win.add(self.search_pane, stretch=NEVER)
         self.search_pane.columnconfigure(0, weight=1)
 
         kwd_frame = ttk.Frame(self.search_pane)
@@ -187,7 +197,7 @@ class AppGui(App, ttk.Frame):
 
         patches_pane = ttk.Frame(self.master)
         patches_pane.pack(**PANE_PACKWARGS)
-        paned_win.add(patches_pane, stretch='always')
+        paned_win.add(patches_pane, stretch=ALWAYS)
 
         # Foreground colors set in Treeview tags don't work on Windows with Tk 8.6.9.
         # Python 3.10 and newer have an updated version of Tk where this bug is no longer present.
@@ -227,23 +237,26 @@ class AppGui(App, ttk.Frame):
         #              BEGIN META PANE              #
         #############################################
 
-        meta_pane = ttk.Notebook(self.master)
+        meta_pane = ttk.Frame(self.master)
         meta_pane.pack(**PANE_PACKWARGS)
-        paned_win.add(meta_pane, stretch='never')
-
-        info_tab = ttk.Frame(self.master, name=INFO_TAB)
-        info_tab.pack(**PANE_PACKWARGS)
+        paned_win.add(meta_pane, stretch=NEVER)
+        meta_pane.columnconfigure(0, weight=1)
 
         self.info_list = tk.StringVar()
         info_lb = tk.Listbox(
-            info_tab, listvariable=self.info_list, selectmode=tk.SINGLE, **LB_KWARGS)
-        info_lb.pack(**PANE_PACKWARGS)
-        meta_pane.add(info_tab, text='Info')
+            meta_pane, listvariable=self.info_list, selectmode=tk.SINGLE, **LB_KWARGS)
+        meta_pane.rowconfigure(0, weight=2)
+        info_lb.grid(row=0, column=0, sticky=tk.NSEW, columnspan=2)
 
-        misc_meta_tab = ttk.Frame(self.master, name=MISC_META_TAB)
-        misc_meta_tab.pack(**PANE_PACKWARGS)
+        fxp_btn = ttk.Button(meta_pane, text='.fxp', command=self.fxp_export)
+        meta_pane.columnconfigure(0, weight=1)
+        meta_pane.rowconfigure(1, weight=0)
+        fxp_btn.grid(row=1, column=0, sticky=tk.NSEW)
 
-        meta_pane.add(misc_meta_tab, text='Insights')
+        if self.schema.file_ext is not None:
+            native_btn = ttk.Button(meta_pane, text='.' + self.schema.file_ext, command=self.native_export)
+            meta_pane.columnconfigure(1, weight=1)
+            native_btn.grid(row=1, column=1, sticky=tk.NSEW)
 
         ###########################################
         #              END META PANE              #
@@ -350,13 +363,37 @@ class AppGui(App, ttk.Frame):
 
         self.info_list.set(super().update_meta())
 
+    @check_active
     def quick_export(self, _):
         """Event handler for dragging an entry from the patch `Treeview`."""
 
-        if self.active_patch > -1:
-            # Delay since tkinterdnd needs instant return
-            self.root.after(70, super().quick_export, self.active_patch)
-            return MOVE, DND_FILES, path_to_dnd(self.quick_tmp)
+        # Delay since tkinterdnd needs instant return
+        self.root.after(70, super().quick_export, self.active_patch)
+        return MOVE, DND_FILES, path_to_dnd(self.quick_tmp)
+
+    @check_active
+    def fxp_export(self):
+        """Exports the active patch to a .fxp file after prompting the user for a path."""
+
+        out_path = filedialog.asksaveasfilename(
+            title='Export as a .fxp file',
+            initialfile=self.name_patchfile(),
+            initialdir=self.get_export_path(),
+            filetypes=(('VST preset file', '*.fxp'),))
+        if len(out_path) != 0:
+            self.export_patch(None, Path(out_path))
+
+    @check_active
+    def native_export(self):
+        """Exports the active patch to a native patch file after prompting the user for a path."""
+
+        out_path = filedialog.asksaveasfilename(
+            title='Export as a .%s file' % self.schema.file_ext,
+            initialfile='%s.%s' % (self.schema.file_base, self.schema.file_ext),
+            initialdir=self.get_export_path(),
+            filetypes=(('%s preset file' % self.schema.synth_name, '*.%s' % self.schema.file_ext),))
+        if len(out_path) != 0:
+            self.export_patch(PATCH_FILE, Path(out_path))
 
     def refresh(self):
         """Refreshes the GUI to reflect new cached data."""

@@ -84,7 +84,7 @@ class Synth1(PatchSchema):
               1, 0, 64, 64, 64, 64, 2, 1, 1, 0, 0, 0, 0, 0, 64, 0, 0, 22, 0, 0, 0, 64, 64, 64, 0, 66, 64, 24, 45057, 44,
               45057, 43, 64, 0, 0, 2, 16, 0, 1, 1, 64]
 
-    file_syntax = '{name}\ncolor={color}\nver={ver}\n{params}'
+    file_syntax = '{patch_name}\ncolor={color}\nver={ver}\n{params}'
 
     file_param = '{index},{value}'
     param_delimiter = '\n'

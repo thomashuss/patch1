@@ -1,7 +1,7 @@
 import configparser
+import re
 from pathlib import Path
 from src.data import *
-from src.sorting import TAGS_NAMES
 from src.common import *
 from src.patches import PatchSchema
 
@@ -11,7 +11,7 @@ DEFAULT_CONFIG = {
         'auto_save': True
     },
     'synth_interface': {
-        'quick_export_as': FXP_CHUNK,
+        'export_as': FXP_CHUNK,
         'export_to': Path.home()
     }
 }
@@ -30,6 +30,8 @@ STATUS_MSGS = {
 
 CONFIG_FILE = 'config.ini'
 DB_FILE = 'db'
+
+FNAME_REMOVE = re.compile(r'[^\w ]+')
 
 
 def searcher(func):
@@ -165,6 +167,7 @@ class App:
     def tag_names(self):
         """Tags patches based on their names."""
 
+        from src.sorting import TAGS_NAMES
         self.status(STATUS_NAME_TAG)
         self.__db.tags_from_val_defs(TAGS_NAMES, 'patch_name')
 
@@ -227,7 +230,7 @@ class App:
         else:
             self.__config_file.touch()
 
-        if self.__config.get('synth_interface', 'quick_export_as') == PATCH_FILE:
+        if self.__config.get('synth_interface', 'export_as') == PATCH_FILE:
             self.quick_tmp = Path(
                 self.__data_dir / ('%s.%s' % (self.schema.file_base, self.schema.file_ext))).resolve()
         else:
@@ -237,21 +240,34 @@ class App:
         if self.__config.getboolean('database', 'auto_load'):
             self.open_database(self.__db_file, silent=True)
 
-    def export_patch(self, ind: int, typ=PATCH_FILE, path=None):
-        """Exports the patch at index `ind`."""
+    def export_patch(self, typ, path: Path):
+        """Exports the active patch as type `typ`."""
 
-        if ind:
-            if path is None:
-                path = Path(self.__config.get(
-                    'synth_interface', 'export_to'))
+        if typ is None:
+            typ = self.__config.get('synth_interface', 'export_as')
 
-            self.__db.write_patch(ind, typ, path)
+        self.__config.set('synth_interface', 'export_to', str(path.parent.resolve()))
+        self.__db.write_patch(self.active_patch, typ, path)
+
+    def get_export_path(self):
+        """Returns the default path for exporting patches."""
+
+        return self.__config.get('synth_interface', 'export_to')
+
+    def name_patchfile(self, typ=None):
+
+        if typ == PATCH_FILE:
+            fname = (self.schema.file_base, self.schema.file_ext)
+        else:
+            # regex sub to remove any unwanted characters from the file name.
+            fname = (FNAME_REMOVE.sub('', self.last_result.loc[self.active_patch]['patch_name']), FXP_FILE_EXT)
+        return '%s.%s' % fname
 
     def quick_export(self, ind: int):
         """Exports the patch at index `ind` using quick settings. The patch will be saved at the path
         `self.quick_tmp`. """
 
-        self.__db.write_patch(ind, self.__config.get('synth_interface', 'quick_export_as'), self.quick_tmp)
+        self.__db.write_patch(ind, self.__config.get('synth_interface', 'export_as'), self.quick_tmp)
 
     def end(self):
         """Housekeeping before exiting the program."""
@@ -264,4 +280,4 @@ class App:
         self.quick_tmp.unlink(missing_ok=True)
 
 
-__all__ = ['App', 'STATUS_MSGS']
+__all__ = ['App', 'STATUS_MSGS', 'PATCH_FILE']

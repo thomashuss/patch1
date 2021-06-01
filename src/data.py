@@ -4,7 +4,6 @@ import pandas as pd
 import re
 from pathlib import Path
 from os import cpu_count
-from src.common import *
 from src.patches import PatchSchema
 from src.preset2fxp import *
 
@@ -221,23 +220,11 @@ class PatchDatabase:
         else:
             self.__df['tags'] = self.__tags.apply(lambda row: sep.join(cols[row]), axis=1)
 
-    def write_patch(self, index, typ, path):
+    def write_patch(self, index, typ, path: Path):
         """Writes the patch at `index` into a file of type `typ` (either `FXP_CHUNK`, `FXP_PARAMS`, or `PATCH_FILE`)
         at `path`."""
 
-        if not isinstance(path, Path):
-            path = Path(path)
-
         patch = self.__df.iloc[index]
-
-        if path.is_dir():
-            # If given a dir rather than a file, auto name the file
-            if typ == PATCH_FILE:
-                fname = (self.schema.file_base, self.schema.file_ext)
-            else:
-                # regex sub to remove any unwanted characters from the file name.
-                fname = (re.sub(r'\W+', '', patch['patch_name']), FXP_FILE_EXT)
-            path /= ('%s.%s' % fname)
 
         if typ == PATCH_FILE:
             self.schema.write_patchfile(patch, path)

@@ -14,7 +14,7 @@ class PatchSchema:
     vst_id: int  # Numerical ID of the VST plugin
     file_pattern: str  # Regex pattern of a patch file
     file_base: str  # What to put to the left of the "." in a temporary patch file name
-    file_ext: str  # Extension of a patch file
+    file_ext: str = None  # Extension of a patch file, if the synth stores patches in a native format
 
     metas: list[str]  # Names of all metadata types specific to this schema, not including the patch's name.
     defaults: list  # Ordered default values of metadata
@@ -27,7 +27,7 @@ class PatchSchema:
     num_params: int
     values: list  # Ordered defaults for parameters
 
-    # Basic fstring-like syntax of a patch file, must contain {name} and {params} along with any other metadata
+    # Basic fstring-like syntax of a patch file, must contain {patch_name} and {params} along with any other metadata
     # (NOTE: for right now, {params} must be at the end of the file)
     file_syntax: str
     # Basic fstring-like syntax of a parameter within a patch file, must contain either {name} or {index},
@@ -55,14 +55,13 @@ class PatchSchema:
         to_write = {col: patch[col] for col in META_COLS}
         to_write.update({col: patch[col] for col in self.metas})
 
-        param_spec = self.file_param + self.param_delimiter
-
-        to_write['params'] = map(param_spec.format_map,
-                                 ({'name': self.params[i], 'index': i, 'value': value}
-                                  for i, value in zip(range(self.num_params), patch[self.params])))
+        to_write['params'] = self.param_delimiter.join(map(
+            self.file_param.format_map,
+            ({'name': self.params[i], 'index': i, 'value': self.param_dtype(value)}
+             for i, value in zip(range(self.num_params), patch[self.params]))))
 
         with open(path, mode='w', encoding=FILE_ENC) as f:
-            f.write(self.file_syntax % to_write)
+            f.write(self.file_syntax.format_map(to_write))
 
     def sanity_check(self, file: str) -> Union[str, bool]:
         """TBD. This function should correct an improperly formatted patch file, or return `False` if the file

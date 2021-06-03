@@ -6,11 +6,14 @@ from pathlib import Path
 from collections import namedtuple
 from tkinter import ttk, messagebox, filedialog
 from traceback import print_exception
-from tkinterdnd2 import *
 from src.app import *
 from src.common import *
 from src.patches import PatchSchema
 from src.synth1 import Synth1
+from . import DND_SUPPORT
+
+if DND_SUPPORT:
+    from tkinterdnd2 import *
 
 # Arguments for packing panedwindow panes and *most* widgets inside of them.
 PANE_PACKWARGS = {'fill': tk.BOTH, 'side': tk.LEFT,
@@ -226,8 +229,9 @@ class AppGui(App, ttk.Frame):
         self.patch_list.heading('name', text='Name')
         self.patch_list.heading('patch_tags', text='Tags')
 
-        self.patch_list.drag_source_register(1, DND_FILES)
-        self.patch_list.dnd_bind('<<DragInitCmd>>', self.quick_export)
+        if DND_SUPPORT:
+            self.patch_list.drag_source_register(1, DND_FILES)
+            self.patch_list.dnd_bind('<<DragInitCmd>>', self.quick_export)
 
         ##############################################
         #              END PATCHES PANE              #

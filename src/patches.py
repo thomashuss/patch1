@@ -28,7 +28,8 @@ class PatchSchema:
     values: list  # Ordered defaults for parameters
 
     # Basic fstring-like syntax of a patch file, must contain {patch_name} and {params} along with any other metadata
-    # (NOTE: for right now, {params} must be at the end of the file)
+    # (NOTE: for right now, {params} must be at the end of the file, and each value must contain
+    # a name or index corresponding to its parameter; an order is not yet supported.)
     file_syntax: str
     # Basic fstring-like syntax of a parameter within a patch file, must contain either {name} or {index},
     # along with a {value}

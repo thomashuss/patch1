@@ -160,7 +160,7 @@ class AppGui(App, ttk.Frame):
         kwd_frame.grid(row=0, column=0, sticky=tk.NSEW)
         # width=0 means the Entry won't stretch the pane at all.
         self.kwd_entry = ttk.Entry(kwd_frame, width=0)
-        self.kwd_entry.bind('<Return>', self.search_by_kwd)
+        self.kwd_entry.bind('<Key>', self.search_keypress_handler)
         self.kwd_entry.grid(row=0, column=0, sticky=tk.NSEW)
         self.busy_wids.append(self.kwd_entry)
         self.kwd_btn = ttk.Button(kwd_frame, text='Search',
@@ -429,6 +429,12 @@ class AppGui(App, ttk.Frame):
 
         self.clear_selection()
         super().keyword_search(self.kwd_entry.get().strip())
+
+    def search_keypress_handler(self, event):
+        """Event handler for pressing a key in the keyword `Entry`."""
+
+        if event.char == '\r':
+            self.search_by_kwd()
 
     def status(self, msg):
         """Updates the status indicator with the static status message defined by `msg`."""

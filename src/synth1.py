@@ -32,13 +32,13 @@ S1_IGNORED_OFFSET = 0x2AC
 
 # Maximum value of each parameter; 0 is assumed minimum, though it isn't always in practice.
 # In some cases a nonzero minimum can be safely ignored...
-PARAM_RANGE = (4, 4, 127, 127, 1, 127, 1, 1, 127, 48, 1, 127, 127, 127, 3, 127, 127, 127, 127, 127, 127, 127, 127, 127,
-               1, 127, 127, 127, 127, 127, 127, 4, 3, 18, 127, 19, 127, 127, 2, 127, 24, 7, 5, 127, 127, 127, 7, 5,
-               127, 127, 127, 127, 127, 127, 127, 127, 127, 1, 1, 1, 127, 127, 127, 127, 4, 1, 1, 1, 1, 1, 1, 2, 127, 1,
-               1, 127, 127, 127, 9, 127, 127, 127, 2, 127, 127, 48, 65536, 99, 65536, 99, 127, 127, 127, 8, 32, 127, 3,
-               1, 127)
+PARAM_RANGE = (4, 3, 127, 127, 1, 127, 1, 1, 127, 48, 1, 127, 127, 127, 3, 127, 127, 127, 127, 127, 127, 127, 127, 127,
+               1, 127, 127, 127, 127, 127, 127, 3, 3, 18, 127, 19, 127, 127, 2, 127, 24, 6, 5, 127, 127, 127, 6, 5, 127,
+               127, 127, 127, 127, 127, 127, 127, 127, 1, 1, 1, 127, 127, 127, 127, 3, 1, 1, 1, 1, 1, 1, 2, 127, 1, 1,
+               127, 127, 1, 9, 127, 127, 127, 2, 127, 127, 48, 65536, 99, 65536, 99, 127, 127, 127, 6, 31, 127, 3, 1,
+               127)
 # ...and when they can't, add these values where index == dict key.
-PARAM_SNOWFLAKES = {9: 24, 87: 1, 89: 1}
+PARAM_SNOWFLAKES = {1: -1, 9: 24, 31: -1, 41: -1, 46: -1, 64: -1, 87: 1, 89: 1, 93: -2, 94: -1}
 
 
 class Synth1(PatchSchema):
@@ -155,6 +155,8 @@ class Synth1(PatchSchema):
     def make_fxp_params(self, params) -> list:
         """Converts ordered native Synth1 parameter values (arbitrary integers) to ordered FXP parameter values (0-1
         float)."""
+
+        print('NOTICE: This export method does not work nearly as well as exporting a FXP chunk.')
 
         fxparams = []
 

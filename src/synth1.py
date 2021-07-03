@@ -127,16 +127,20 @@ class Synth1(PatchSchema):
         # cast buffer to bytearray for some tweaking.
         list_buf = bytearray(pak.get_buffer())
 
-        # FWIW, when reading a chunk, this is what you pass into xdrlib.Unpacker:
-        # pack('>L', 1) + fxp.chunk[0x239:0x4e5] + fxp.chunk[0x505:]
-
         # Exhibit B: Synth1 uses its own magic value for start of list (but not end)
         # So get rid of initial 0x0001 flag from packer; the actual magic value is in the header, which
         # is packed before this in the final chunk.
         del list_buf[0x0:0x4]
 
+        # FWIW, when reading a chunk, this is what you pass into xdrlib.Unpacker:
+        # pack('>L', 1) + fxp.chunk[0x239:0x4e5] + fxp.chunk[0x505:]
+
         # insert filler bytes into the bytearray at offset
         list_buf[S1_IGNORED_OFFSET:S1_IGNORED_OFFSET] = S1_IGNORED_FILLER
+
+        # Exhibit C: For some reason, the key shift is little endian... unlike the rest of the parameters!
+        # Swap these 7 bytes.
+        list_buf[0x48:0x4F] = list_buf[0x4E:0x47:-1]
 
         chunk = BytesIO()
         chunk.write(pack(*s1_chunk_header(ver)))
@@ -150,7 +154,7 @@ class Synth1(PatchSchema):
 
     def make_fxp_params(self, params) -> list:
         """Converts ordered native Synth1 parameter values (arbitrary integers) to ordered FXP parameter values (0-1
-        float). """
+        float)."""
 
         fxparams = []
 

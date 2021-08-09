@@ -38,7 +38,7 @@ class PatchDatabase:
     modified_db = False
     modified_cls = False
 
-    tags = []
+    tags: pd.Index = pd.Index([])
     banks = []
 
     def __init__(self, schema: PatchSchema):
@@ -111,7 +111,7 @@ class PatchDatabase:
     def refresh(self):
         """Rebuilds cached indexes for the active database."""
 
-        self.tags = self.__tags.columns.to_list()
+        self.tags = self.__tags.columns
         self.banks = self.get_categories('bank')
 
     def __return_df(self, mask):
@@ -142,6 +142,11 @@ class PatchDatabase:
         # create masks for each tag, unpack into list, take logical and,
         # reduce into single mask, return slice of dataframe with that mask
         return self.__return_df(np.logical_and.reduce([*(self.__tags[tag] == True for tag in tags)]))
+
+    def get_tags(self, ind: int) -> list:
+        """Returns the tags of the patch at index `ind`."""
+
+        return self.tags[self.__tags.iloc[ind]].to_list()
 
     def get_categories(self, col: str) -> list:
         """Returns all possible values within a column of categorical data."""
@@ -213,12 +218,11 @@ class PatchDatabase:
         """Internal use only. Updates the stringified tags for the patch at `index`, or the entire database."""
 
         sep = ', '
-        cols = self.__tags.columns
         if index is not None:
             patch = self.__tags.iloc[index]
-            self.__df.loc[index, 'tags'] = sep.join(cols[patch])
+            self.__df.loc[index, 'tags'] = sep.join(self.tags[patch])
         else:
-            self.__df['tags'] = self.__tags.apply(lambda row: sep.join(cols[row]), axis=1)
+            self.__df['tags'] = self.__tags.apply(lambda row: sep.join(self.tags[row]), axis=1)
 
     def write_patch(self, index, typ, path: Path):
         """Writes the patch at `index` into a file of type `typ` (either `FXP_CHUNK`, `FXP_PARAMS`, or `PATCH_FILE`)

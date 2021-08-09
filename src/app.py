@@ -125,18 +125,18 @@ class App:
         """Define this. It's called whenever a search is finished."""
         ...
 
-    def update_meta(self) -> list:
-        """This should update the user-facing metadata list with the return value of the super function."""
+    def get_meta(self) -> dict:
+        """Returns the metadata of the active patch."""
 
         if self.active_patch > -1:
             patch = self.last_result.loc[self.active_patch]
-            return [
-                'Name:', patch['patch_name'], '',
-                'Bank:', patch['bank'], '',
-                'Tags:', patch['tags'], ''
-            ]
+            return {
+                'name': patch['patch_name'],
+                'bank': patch['bank'],
+                'tags': self.__db.get_tags(self.active_patch)
+            }
         else:
-            return []
+            return dict()
 
     @searcher
     def search_by_tags(self, tags: list):
@@ -159,7 +159,7 @@ class App:
     def refresh(self):
         """Refreshes cached indexes."""
 
-        self.tags = self.__db.tags
+        self.tags = self.__db.tags.to_list()
         self.banks = self.__db.banks
         self.status(STATUS_READY)
 

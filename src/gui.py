@@ -4,7 +4,7 @@ import tkinter as tk
 import webbrowser
 from pathlib import Path
 from collections import namedtuple
-from tkinter import ttk, messagebox, filedialog
+from tkinter import ttk, messagebox, filedialog, font
 from traceback import print_exception
 from src.app import *
 from src.common import *
@@ -34,6 +34,7 @@ FILE_KWARGS = {'filetypes': (('All files', '*'),), 'initialdir': str(Path.home()
 
 ALWAYS = 'always'
 NEVER = 'never'
+EMPTY = ''
 
 
 def scrollbars(master, box, draw_x=True, draw_y=True):
@@ -95,8 +96,7 @@ class AppGui(App, ttk.Frame):
 
     status_text: tk.StringVar  # Text of the status label on the bottom
     banks_list: tk.StringVar  # List which populates the banks listbox
-    tags_list: tk.StringVar  # List which populates the tag selection listbox
-    info_list: tk.StringVar  # List which populates the patch info listbox
+    active_tags: tk.StringVar  # List which populates the tag selection listbox
     patch_list: ttk.Treeview  # Treeview of patches which match the search results
     kwd_entry: ttk.Entry  # Keyword search text box
 
@@ -171,9 +171,9 @@ class AppGui(App, ttk.Frame):
         tags_frame = ttk.Frame(self.search_pane)
         self.search_pane.rowconfigure(1, weight=1)
         tags_frame.grid(row=1, column=0, sticky=tk.NSEW)
-        self.tags_list = tk.StringVar()
+        self.active_tags = tk.StringVar()
         self.tags_lb = tk.Listbox(
-            tags_frame, listvariable=self.tags_list, selectmode=tk.EXTENDED, **LB_KWARGS)
+            tags_frame, listvariable=self.active_tags, selectmode=tk.EXTENDED, **LB_KWARGS)
         self.tags_lb.pack(fill=tk.BOTH, side=tk.LEFT, expand=True)
         scrollbars(self.master, self.tags_lb)
         self.tags_lb.bind('<<ListboxSelect>>', self.search_by_tags)
@@ -246,12 +246,27 @@ class AppGui(App, ttk.Frame):
         paned_win.add(meta_pane, stretch=NEVER)
         meta_pane.columnconfigure(0, weight=1)
 
-        self.info_list = tk.StringVar()
-        info_lb = tk.Listbox(
-            meta_pane, listvariable=self.info_list, selectmode=tk.SINGLE, **LB_KWARGS)
         meta_pane.rowconfigure(0, weight=2)
-        info_lb.grid(row=0, column=0, sticky=tk.NSEW, columnspan=2)
+        info_pane = ttk.Frame(meta_pane)
+        info_pane.grid(row=0, column=0, sticky=tk.NSEW, columnspan=2)
 
+        bold_font = font.nametofont('TkDefaultFont').copy()
+        bold_font.configure(weight=font.BOLD)
+
+        self.active_name = tk.StringVar(value='Select a patch.')
+        name_lbl = ttk.Label(info_pane, textvariable=self.active_name, font=bold_font, width=LB_KWARGS['width'],
+                             wraplength=LB_KWARGS['width'] * 10)
+        name_lbl.pack(anchor=tk.W)
+
+        self.active_bank = tk.StringVar()
+        bank_lbl = ttk.Label(info_pane, textvariable=self.active_bank, wraplength=LB_KWARGS['width'] * 10)
+        bank_lbl.pack(anchor=tk.W)
+
+        self.active_tags_editor = tk.StringVar()
+        tags_editor = tk.Listbox(info_pane, selectmode=tk.SINGLE, listvariable=self.active_tags_editor, **LB_KWARGS)
+        tags_editor.pack(**PANE_PACKWARGS)
+
+        # buttons
         fxp_btn = ttk.Button(meta_pane, text='.fxp', command=self.fxp_export)
         meta_pane.columnconfigure(0, weight=1)
         meta_pane.rowconfigure(1, weight=0)
@@ -336,7 +351,7 @@ class AppGui(App, ttk.Frame):
             self.patch_list.delete(*kids)
 
     def search_done(self):
-        """Update the status text with the number of visible patches."""
+        """Updates the status text with the number of visible patches."""
 
         kids = self.patch_list.get_children()
         count = len(kids)
@@ -365,7 +380,10 @@ class AppGui(App, ttk.Frame):
     def update_meta(self):
         """Updates the metadata pane with information about the selected patch."""
 
-        self.info_list.set(super().update_meta())
+        data = self.get_meta()
+        self.active_bank.set(data.get('bank', EMPTY))
+        self.active_name.set(data.get('name', EMPTY))
+        self.active_tags_editor.set(data.get('tags', EMPTY))
 
     @check_active
     def quick_export(self, _):
@@ -404,7 +422,7 @@ class AppGui(App, ttk.Frame):
 
         super().refresh()
         self.clear_search()
-        self.tags_list.set(self.tags)
+        self.active_tags.set(self.tags)
         self.banks_list.set(self.banks)
 
     @searcher

@@ -4,7 +4,7 @@ import tkinter as tk
 import webbrowser
 from pathlib import Path
 from collections import namedtuple
-from tkinter import ttk, messagebox, filedialog, font
+from tkinter import ttk, messagebox, filedialog, font, simpledialog
 from traceback import print_exception
 from src.app import *
 from src.common import *
@@ -35,6 +35,8 @@ FILE_KWARGS = {'filetypes': (('All files', '*'),), 'initialdir': str(Path.home()
 ALWAYS = 'always'
 NEVER = 'never'
 EMPTY = ''
+
+EMPTY_PATCH_NAME = 'Select a patch.'
 
 
 def scrollbars(master, box, draw_x=True, draw_y=True):
@@ -253,7 +255,7 @@ class AppGui(App, ttk.Frame):
         bold_font = font.nametofont('TkDefaultFont').copy()
         bold_font.configure(weight=font.BOLD)
 
-        self.active_name = tk.StringVar(value='Select a patch.')
+        self.active_name = tk.StringVar(value=EMPTY_PATCH_NAME)
         name_lbl = ttk.Label(info_pane, textvariable=self.active_name, font=bold_font, width=LB_KWARGS['width'],
                              wraplength=LB_KWARGS['width'] * 10)
         name_lbl.pack(anchor=tk.W)
@@ -266,16 +268,25 @@ class AppGui(App, ttk.Frame):
         tags_editor = tk.Listbox(info_pane, selectmode=tk.SINGLE, listvariable=self.active_tags_editor, **LB_KWARGS)
         tags_editor.pack(**PANE_PACKWARGS)
 
+        meta_pane.rowconfigure(1, weight=0)
+        meta_pane.columnconfigure(0, weight=1)
+        meta_pane.columnconfigure(1, weight=1)
+
+        plus_btn = ttk.Button(meta_pane, text='+', command=self.tag_prompt)
+        plus_btn.grid(row=1, column=0, sticky=tk.NSEW)
+        minus_btn = ttk.Button(meta_pane, text='-')
+        minus_btn.grid(row=1, column=1, sticky=tk.NSEW)
+
+        ttk.Separator(meta_pane, orient=tk.HORIZONTAL).grid(row=2, columnspan=2, sticky=tk.EW)
+
         # buttons
         fxp_btn = ttk.Button(meta_pane, text='.fxp', command=self.fxp_export)
-        meta_pane.columnconfigure(0, weight=1)
-        meta_pane.rowconfigure(1, weight=0)
-        fxp_btn.grid(row=1, column=0, sticky=tk.NSEW)
+        meta_pane.rowconfigure(3, weight=0)
+        fxp_btn.grid(row=3, column=0, sticky=tk.NSEW)
 
         if self.schema.file_ext is not None:
             native_btn = ttk.Button(meta_pane, text='.' + self.schema.file_ext, command=self.native_export)
-            meta_pane.columnconfigure(1, weight=1)
-            native_btn.grid(row=1, column=1, sticky=tk.NSEW)
+            native_btn.grid(row=3, column=1, sticky=tk.NSEW)
 
         ###########################################
         #              END META PANE              #
@@ -382,7 +393,7 @@ class AppGui(App, ttk.Frame):
 
         data = self.get_meta()
         self.active_bank.set(data.get('bank', EMPTY))
-        self.active_name.set(data.get('name', EMPTY))
+        self.active_name.set(data.get('name', EMPTY_PATCH_NAME))
         self.active_tags_editor.set(data.get('tags', EMPTY))
 
     @check_active
@@ -417,13 +428,24 @@ class AppGui(App, ttk.Frame):
         if len(out_path) != 0:
             self.export_patch(PATCH_FILE, Path(out_path))
 
+    @check_active
+    def tag_prompt(self):
+        """Prompts the user to add a tag to the active patch."""
+
+        tag = simpledialog.askstring('Add a tag...', 'Tag this patch with:')
+        if tag is not None and tag != EMPTY:
+            self.add_tag(tag)
+
     def refresh(self):
         """Refreshes the GUI to reflect new cached data."""
 
         super().refresh()
-        self.clear_search()
+        #self.clear_search()
         self.active_tags.set(self.tags)
         self.banks_list.set(self.banks)
+
+        if self.active_patch > -1:
+            self.update_meta()
 
     @searcher
     def search_by_tags(self):

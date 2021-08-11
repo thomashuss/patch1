@@ -183,6 +183,12 @@ class App:
         self.status(STATUS_SIM_TAG)
         self.__db.classify_tags()
 
+    @reloads
+    def add_tag(self, tag: str):
+        """Adds `tag` to the active patch's tags."""
+
+        self.__db.change_tags(self.active_patch, [tag], False)
+
     def status(self, msg):
         """Fully implement this function by updating a user-facing status indicator before calling the super."""
 

@@ -215,9 +215,14 @@ class PatchDatabase:
         self.__update_tags(index)
 
     def __update_tags(self, index=None):
-        """Internal use only. Updates the stringified tags for the patch at `index`, or the entire database."""
+        """Internal use only. Updates the stringified tags for the patch at `index` or the entire database, and
+        cleans up the tag database."""
 
         sep = ', '
+
+        # Get rid of unused tags, sort columns, and fill na values
+        self.__tags = self.__tags[sorted(self.__tags.columns[self.__tags.any()], key=lambda s: s.lower())].fillna(False)
+        self.refresh()
         if index is not None:
             patch = self.__tags.iloc[index]
             self.__df.loc[index, 'tags'] = sep.join(self.tags[patch])

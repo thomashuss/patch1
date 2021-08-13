@@ -38,13 +38,15 @@ def searcher(func):
     """Wrapper for functions that perform searches."""
 
     def inner(self, q):
-        if len(q) > 0 and self.last_query != q:
+        if len(q):
             self.status(STATUS_SEARCH)
+            self.empty_patches()
 
-            self.last_query = q
+            self.last_query = (func.__name__, q)
             self.last_result = func(self, q)
 
-            self.last_result.apply(self.put_patch, axis=1)
+            if self.last_result is not None:
+                self.last_result.apply(self.put_patch, axis=1)
 
             self.search_done()
             self.unwait()
@@ -76,7 +78,7 @@ class App:
 
     quick_tmp: Path  # Temporary file for quick export
     active_patch: int = -1  # Index in db of currently active patch
-    last_query = ''  # Last search query, to avoid redundant queries
+    last_query = ('', '')
     last_result = None
 
     tags = []  # tag indexes for active database
@@ -139,13 +141,13 @@ class App:
             return dict()
 
     @searcher
-    def search_by_tags(self, tags: list):
+    def tag_search(self, tags: list):
         """Searches for patches matching `tags`."""
 
         return self.__db.find_patches_by_tags(tags)
 
     @searcher
-    def search_by_bank(self, bank: str):
+    def bank_search(self, bank: str):
         """Searches for patches in bank `bank`."""
 
         return self.__db.find_patches_by_val(bank, 'bank', exact=True)
@@ -162,6 +164,9 @@ class App:
         self.tags = self.__db.tags.to_list()
         self.banks = self.__db.banks
         self.status(STATUS_READY)
+
+        if len(self.last_query[0]):
+            getattr(self, self.last_query[0])(self.last_query[1])
 
     @reloads
     def tag_names(self):
@@ -189,14 +194,22 @@ class App:
 
         self.__db.change_tags(self.active_patch, [tag], False)
 
+    @reloads
+    def remove_tag(self, tag: str):
+        """Removes `tag` from the active patch's tags."""
+
+        tags = self.__db.get_tags(self.active_patch)
+        tags.remove(tag)
+        self.__db.change_tags(self.active_patch, tags, True)
+
     def status(self, msg):
         """Fully implement this function by updating a user-facing status indicator before calling the super."""
 
         if msg == STATUS_READY:
             self.unwait()
         else:
-            self.empty_patches()
-            self.last_query = ''
+            #self.empty_patches()
+            #self.last_query = ''
             self.wait()
 
     @reloads

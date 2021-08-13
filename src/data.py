@@ -139,9 +139,12 @@ class PatchDatabase:
     def find_patches_by_tags(self, tags: list) -> pd.DataFrame:
         """Finds patches in the database tagged with (at least) each tag in `tags`."""
 
-        # create masks for each tag, unpack into list, take logical and,
-        # reduce into single mask, return slice of dataframe with that mask
-        return self.__return_df(np.logical_and.reduce([*(self.__tags[tag] == True for tag in tags)]))
+        try:
+            # create masks for each tag, unpack into list, take logical and,
+            # reduce into single mask, return slice of dataframe with that mask
+            return self.__return_df(np.logical_and.reduce([*(self.__tags[tag] == True for tag in tags)]))
+        except KeyError:
+            ...
 
     def get_tags(self, ind: int) -> list:
         """Returns the tags of the patch at index `ind`."""

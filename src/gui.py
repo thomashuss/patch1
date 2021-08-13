@@ -1,3 +1,4 @@
+import _tkinter
 import os
 import sys
 import tkinter as tk
@@ -101,6 +102,7 @@ class AppGui(App, ttk.Frame):
     active_tags: tk.StringVar  # List which populates the tag selection listbox
     patch_list: ttk.Treeview  # Treeview of patches which match the search results
     kwd_entry: ttk.Entry  # Keyword search text box
+    old_selection = None
 
     schema: PatchSchema
 
@@ -265,8 +267,9 @@ class AppGui(App, ttk.Frame):
         bank_lbl.pack(anchor=tk.W)
 
         self.active_tags_editor = tk.StringVar()
-        tags_editor = tk.Listbox(info_pane, selectmode=tk.SINGLE, listvariable=self.active_tags_editor, **LB_KWARGS)
-        tags_editor.pack(**PANE_PACKWARGS)
+        self.tags_editor = tk.Listbox(info_pane, selectmode=tk.SINGLE,
+                                      listvariable=self.active_tags_editor, **LB_KWARGS)
+        self.tags_editor.pack(**PANE_PACKWARGS)
 
         meta_pane.rowconfigure(1, weight=0)
         meta_pane.columnconfigure(0, weight=1)
@@ -274,7 +277,7 @@ class AppGui(App, ttk.Frame):
 
         plus_btn = ttk.Button(meta_pane, text='+', command=self.tag_prompt)
         plus_btn.grid(row=1, column=0, sticky=tk.NSEW)
-        minus_btn = ttk.Button(meta_pane, text='-')
+        minus_btn = ttk.Button(meta_pane, text='-', command=self.tag_delete)
         minus_btn.grid(row=1, column=1, sticky=tk.NSEW)
 
         ttk.Separator(meta_pane, orient=tk.HORIZONTAL).grid(row=2, columnspan=2, sticky=tk.EW)
@@ -356,6 +359,7 @@ class AppGui(App, ttk.Frame):
     def empty_patches(self):
         """Empties the patch Treeview."""
 
+        self.old_selection = self.patch_list.selection()
         kids = self.patch_list.get_children()
         if len(kids) > 0:
             self.update_active_patch()
@@ -436,31 +440,42 @@ class AppGui(App, ttk.Frame):
         if tag is not None and tag != EMPTY:
             self.add_tag(tag)
 
+    @check_active
+    def tag_delete(self):
+        """Removes the selected tag in the tag editor from the active patch."""
+
+        selection = self.tags_editor.curselection()
+        if len(selection):
+            self.remove_tag(self.tags_editor.get(selection[0]))
+
     def refresh(self):
         """Refreshes the GUI to reflect new cached data."""
 
         super().refresh()
-        #self.clear_search()
+        # self.clear_search()
         self.active_tags.set(self.tags)
         self.banks_list.set(self.banks)
 
-        if self.active_patch > -1:
-            self.update_meta()
+        if self.old_selection is not None:
+            try:
+                self.patch_list.selection_set(self.old_selection)
+            except _tkinter.TclError:
+                ...
 
     @searcher
     def search_by_tags(self):
         """Searches for patches matching the currently selected tag(s) in the tags `Listbox`."""
 
         self.clear_keyword()
-        super().search_by_tags([self.tags_lb.get(i)
-                                for i in self.tags_lb.curselection()])
+        super().tag_search([self.tags_lb.get(i)
+                            for i in self.tags_lb.curselection()])
 
     @searcher
     def search_by_bank(self):
         """Searches for patches belonging to the currently selected bank in the banks `Listbox`."""
 
         self.clear_keyword()
-        super().search_by_bank(self.banks_lb.get(
+        super().bank_search(self.banks_lb.get(
             self.banks_lb.curselection()[0]))
 
     @searcher

@@ -111,7 +111,7 @@ class PatchDatabase:
     def refresh(self):
         """Rebuilds cached indexes for, and cleans up, the active database."""
 
-        self.__tags = self.__tags.loc[self.__df.index]
+        self.__tags = self.__tags.loc[self.__df.index].fillna(False)
         self.tags = self.__tags.columns
         self.banks = self.get_categories('bank')
 

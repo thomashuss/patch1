@@ -117,7 +117,6 @@ class PatchSchema:
                      'params' and key != 'name'}
             # need to replace the params string with list of params
             rdict['params'] = params
-            rdict['patch_name'] = vals['name']
             rdict['bank'] = path.parent.name
             return rdict
         else:

@@ -205,7 +205,6 @@ class PatchDatabase:
 
             self.__tags.loc[mask, tag] = True
 
-        self.__tags = self.__tags.fillna(False)
         self.__update_tags()
 
     @volatile_db

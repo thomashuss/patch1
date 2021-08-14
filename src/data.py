@@ -167,15 +167,16 @@ class PatchDatabase:
         from sklearn.preprocessing import StandardScaler
         from sklearn.model_selection import train_test_split
 
-        tagged_mask = self.__tags.any(axis=1)
-        df = self.__df.loc[tagged_mask]
-        if len(df) == 0:
+        df = self.__df.drop_duplicates(self.schema.params)
+        tags = self.__tags.loc[df.index].fillna(False)
+        tagged_mask = tags.any(axis=1)
+        if len(tagged_mask) == 0:
             raise Exception('Add some tags and try again.')
+        df = df.loc[tagged_mask]
+        tags = tags.loc[tagged_mask]
 
         X = df[self.schema.params].to_numpy()
-
-        self.__tags = self.__tags.fillna(False)
-        y = self.__tags[tagged_mask].to_numpy(dtype='bool')
+        y = tags.to_numpy(dtype='bool')
 
         X_train, X_test, y_train, y_test = train_test_split(X, y)
         self.__knn = Pipeline([('scaler', StandardScaler()), ('knn', KNeighborsClassifier(

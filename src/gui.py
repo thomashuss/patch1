@@ -278,9 +278,9 @@ class AppGui(App, ttk.Frame):
         meta_pane.columnconfigure(0, weight=1)
         meta_pane.columnconfigure(1, weight=1)
 
-        plus_btn = ttk.Button(meta_pane, text='+', command=self.tag_prompt)
+        plus_btn = ttk.Button(meta_pane, text='Add Tag', command=self.tag_prompt)
         plus_btn.grid(row=1, column=0, sticky=tk.NSEW)
-        minus_btn = ttk.Button(meta_pane, text='-', command=self.tag_delete)
+        minus_btn = ttk.Button(meta_pane, text='Remove Tag', command=self.tag_delete)
         minus_btn.grid(row=1, column=1, sticky=tk.NSEW)
 
         ttk.Separator(meta_pane, orient=tk.HORIZONTAL).grid(row=2, columnspan=2, sticky=tk.EW)

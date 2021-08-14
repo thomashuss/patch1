@@ -140,6 +140,9 @@ class AppGui(App, ttk.Frame):
         edit.add_command(label='Run parameter-based tagging...',
                          command=self.tag_similar)
         edit.add_separator()
+        edit.add_command(label='Remove duplicates...',
+                         command=self.unduplicate)
+        edit.add_separator()
         edit.add_command(label='Settings')
         menubar.add_cascade(label='Edit', menu=edit)
 

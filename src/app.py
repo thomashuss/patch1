@@ -239,6 +239,12 @@ class App:
         if self.__db.is_active():
             self.__db.to_disk(path)
 
+    @reloads
+    def unduplicate(self):
+        """Removes duplicate patches from the database."""
+
+        self.__db.remove_duplicates()
+
     def load_config(self):
         """Loads the config file for the program, or create one if it doesn't exist."""
 

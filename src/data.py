@@ -109,8 +109,9 @@ class PatchDatabase:
         return self.__df is not None
 
     def refresh(self):
-        """Rebuilds cached indexes for the active database."""
+        """Rebuilds cached indexes for, and cleans up, the active database."""
 
+        self.__tags = self.__tags.loc[self.__df.index]
         self.tags = self.__tags.columns
         self.banks = self.get_categories('bank')
 
@@ -216,6 +217,12 @@ class PatchDatabase:
 
         self.__tags.loc[index, tags] = True
         self.__update_tags(index)
+
+    @volatile_db
+    def remove_duplicates(self):
+        """Removes duplicate patches from the database."""
+
+        self.__df = self.__df.drop_duplicates(self.schema.params)
 
     def __update_tags(self, index=None):
         """Internal use only. Updates the stringified tags for the patch at `index` or the entire database, and

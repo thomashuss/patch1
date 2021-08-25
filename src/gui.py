@@ -470,7 +470,7 @@ class AppGui(App, ttk.Frame):
         """Searches for patches matching the currently selected tag(s) in the tags `Listbox`."""
 
         self.clear_keyword()
-        super().tag_search([self.tags_lb.get(i)
+        self.tag_search([self.tags_lb.get(i)
                             for i in self.tags_lb.curselection()])
 
     @searcher
@@ -478,7 +478,7 @@ class AppGui(App, ttk.Frame):
         """Searches for patches belonging to the currently selected bank in the banks `Listbox`."""
 
         self.clear_keyword()
-        super().bank_search(self.banks_lb.get(
+        self.bank_search(self.banks_lb.get(
             self.banks_lb.curselection()[0]))
 
     @searcher
@@ -486,7 +486,7 @@ class AppGui(App, ttk.Frame):
         """Searches for patches matching the query currently entered in the keyword `Entry`."""
 
         self.clear_selection()
-        super().keyword_search(self.kwd_entry.get().strip())
+        self.keyword_search(self.kwd_entry.get().strip())
 
     def search_keypress_handler(self, event):
         """Event handler for pressing a key in the keyword `Entry`."""
@@ -506,7 +506,7 @@ class AppGui(App, ttk.Frame):
         new_dir = filedialog.askdirectory(
             title='Select the folder containing your banks:', initialdir=FILE_KWARGS['initialdir'])
         if len(new_dir) != 0:
-            super().new_database(new_dir)
+            self.new_database(new_dir)
 
     def end(self):
         """Closes the program."""

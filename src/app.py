@@ -265,6 +265,11 @@ class App:
         if self.__config.getboolean('database', 'auto_load'):
             self.open_database(self.__db_file, silent=True)
 
+    def get_config_path(self) -> Path:
+        """Returns the `Path` to the `App`'s configuration file."""
+
+        return self.__config_file
+
     def export_patch(self, typ, path: Path):
         """Exports the active patch as type `typ`."""
 

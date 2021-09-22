@@ -143,7 +143,7 @@ class AppGui(App, ttk.Frame):
         edit.add_command(label='Remove duplicates...',
                          command=self.unduplicate)
         edit.add_separator()
-        edit.add_command(label='Settings')
+        edit.add_command(label='Settings', command=self.open_settings)
         menubar.add_cascade(label='Edit', menu=edit)
 
         help_menu = tk.Menu(menubar, tearoff=False)
@@ -514,6 +514,10 @@ class AppGui(App, ttk.Frame):
         self.root.withdraw()
         super().end()
         self.master.destroy()
+
+    def open_settings(self):
+        self.info("To change the program's settings, edit the file at %s. Please refer to the documentation first."
+                  % self.get_config_path())
 
 
 __all__ = ['AppGui']

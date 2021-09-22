@@ -15,3 +15,6 @@ patch1.egg-info
 # Nobody cares, Tim Cook.
 .DS_Store
 ._*
+
+# In case of local testing w/ a Jupyter Notebook
+*.ipynb

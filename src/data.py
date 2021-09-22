@@ -4,9 +4,7 @@ import pandas as pd
 import re
 from pathlib import Path
 from os import cpu_count
-
-import tables.exceptions
-
+from tables.exceptions import HDF5ExtError
 from src.patches import PatchSchema
 from src.preset2fxp import *
 
@@ -88,7 +86,7 @@ class PatchDatabase:
 
         try:
             store = pd.HDFStore(str(file), mode='r')
-        except (tables.exceptions.HDF5ExtError, OSError):
+        except (HDF5ExtError, OSError):
             raise FileNotFoundError
 
         self.__df = store.get(DB_KEY)

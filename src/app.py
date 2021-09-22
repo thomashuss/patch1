@@ -208,8 +208,6 @@ class App:
         if msg == STATUS_READY:
             self.unwait()
         else:
-            #self.empty_patches()
-            #self.last_query = ''
             self.wait()
 
     @reloads
@@ -220,24 +218,22 @@ class App:
         self.__db.bootstrap(Path(patches_dir))
 
     @reloads
-    def open_database(self, path, silent=False):
+    def open_database(self, silent=False):
         """Loads a previously saved database."""
 
-        if not isinstance(path, Path):
-            path = Path(path)
-
+        path = self.__db_file
         if path.is_file():
             try:
                 self.__db.from_disk(path)
-            except:
+            except FileNotFoundError:
                 if not silent:
                     raise Exception('That is not a valid data file.')
 
-    def save_database(self, path):
+    def save_database(self):
         """Saves the active database to disk."""
 
         if self.__db.is_active():
-            self.__db.to_disk(path)
+            self.__db.to_disk(self.__db_file)
 
     @reloads
     def unduplicate(self):
@@ -263,7 +259,7 @@ class App:
         self.quick_tmp.touch(exist_ok=True)
 
         if self.__config.getboolean('database', 'auto_load'):
-            self.open_database(self.__db_file, silent=True)
+            self.open_database(silent=True)
 
     def get_config_path(self) -> Path:
         """Returns the `Path` to the `App`'s configuration file."""
@@ -303,7 +299,7 @@ class App:
         """Housekeeping before exiting the program."""
 
         if self.__config.getboolean('database', 'auto_save'):
-            self.save_database(self.__db_file)
+            self.save_database()
 
         with open(self.__config_file, 'w') as cfile:
             self.__config.write(cfile)

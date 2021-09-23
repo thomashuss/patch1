@@ -31,7 +31,7 @@ LB_KWARGS = {'selectbackground': '#d6be48',
              'activestyle': tk.NONE, 'width': 25}
 
 # Common properties of open/save dialogs
-FILE_KWARGS = {'filetypes': (('All files', '*'),), 'initialdir': str(Path.home())}
+INITIAL_DIR = str(Path.home())
 
 ALWAYS = 'always'
 NEVER = 'never'
@@ -131,6 +131,7 @@ class AppGui(App, ttk.Frame):
         file_menu.add_command(label='Create new database...',
                               command=self.new_database_prompt)
         file_menu.add_command(label='Save database...', command=self.save_database)
+        file_menu.add_command(label='Save database as...', command=self.save_database_prompt)
         file_menu.add_separator()
         file_menu.add_command(label='Exit', command=self.end)
         menubar.add_cascade(label='File', menu=file_menu)
@@ -507,14 +508,21 @@ class AppGui(App, ttk.Frame):
         """Prompts the user to select a directory containing patch banks and then imports that directory."""
 
         new_dir = filedialog.askdirectory(
-            title='Select the folder containing your banks:', initialdir=FILE_KWARGS['initialdir'])
+            title='Select the folder containing your banks:', initialdir=INITIAL_DIR)
         if len(new_dir) != 0:
             self.new_database(new_dir)
+
+    def save_database_prompt(self):
+        """Prompts the user to select a file to save the active database into."""
+
+        db_file = filedialog.asksaveasfilename(title='Save the database to:', initialdir=INITIAL_DIR)
+        if len(db_file) != 0:
+            self.save_database(db_file)
 
     def custom_tags_prompt(self):
         """Prompts the user to select a JSON file defining custom tags."""
 
-        tags_file = filedialog.askopenfilename(title='Select a JSON file:', initialdir=FILE_KWARGS['initialdir'],
+        tags_file = filedialog.askopenfilename(title='Select a JSON file:', initialdir=INITIAL_DIR,
                                                filetypes=(('JSON files', '*.json'),))
         if len(tags_file) != 0:
             self.tag_names_custom(tags_file)

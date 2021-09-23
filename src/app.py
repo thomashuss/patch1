@@ -245,7 +245,7 @@ class App:
     def save_database(self, path=None):
         """Saves the active database to the file at `path`, or the default database file."""
 
-        if self.__db.is_active() and self.modified_db:
+        if self.__db.is_active():
             self.__db.to_disk(path if path else self.__db_file)
             self.modified_db = False
 
@@ -312,7 +312,7 @@ class App:
     def end(self):
         """Housekeeping before exiting the program."""
 
-        if self.__config.getboolean('database', 'auto_save'):
+        if self.__config.getboolean('database', 'auto_save') and self.modified_db:
             self.save_database()
 
         with open(self.__config_file, 'w') as cfile:

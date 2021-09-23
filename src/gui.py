@@ -130,6 +130,7 @@ class AppGui(App, ttk.Frame):
         file = tk.Menu(menubar, tearoff=False)
         file.add_command(label='Create new database...',
                          command=self.new_database_prompt)
+        file.add_command(label='Save database...', command=self.save_database)
         file.add_separator()
         file.add_command(label='Exit', command=self.end)
         menubar.add_cascade(label='File', menu=file)

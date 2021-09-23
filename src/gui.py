@@ -127,25 +127,28 @@ class AppGui(App, ttk.Frame):
         self.root.title('%s - %s' % (self.schema.synth_name, APP_NAME))
 
         menubar = tk.Menu(self.master)
-        file = tk.Menu(menubar, tearoff=False)
-        file.add_command(label='Create new database...',
-                         command=self.new_database_prompt)
-        file.add_command(label='Save database...', command=self.save_database)
-        file.add_separator()
-        file.add_command(label='Exit', command=self.end)
-        menubar.add_cascade(label='File', menu=file)
+        file_menu = tk.Menu(menubar, tearoff=False)
+        file_menu.add_command(label='Create new database...',
+                              command=self.new_database_prompt)
+        file_menu.add_command(label='Save database...', command=self.save_database)
+        file_menu.add_separator()
+        file_menu.add_command(label='Exit', command=self.end)
+        menubar.add_cascade(label='File', menu=file_menu)
 
-        edit = tk.Menu(menubar, tearoff=False)
-        edit.add_command(label='Run name-based tagging...',
-                         command=self.tag_names)
-        edit.add_command(label='Run parameter-based tagging...',
-                         command=self.tag_similar)
-        edit.add_separator()
-        edit.add_command(label='Remove duplicates...',
-                         command=self.unduplicate)
-        edit.add_separator()
-        edit.add_command(label='Settings', command=self.open_settings)
-        menubar.add_cascade(label='Edit', menu=edit)
+        edit_menu = tk.Menu(menubar, tearoff=False)
+        name_tagging_menu = tk.Menu(menubar, tearoff=False)
+        edit_menu.add_cascade(label='Run name-based tagging with...', menu=name_tagging_menu)
+        name_tagging_menu.add_command(label='built-in definitions',
+                                      command=self.tag_names)
+        name_tagging_menu.add_command(label='custom definitions')
+        edit_menu.add_command(label='Run parameter-based tagging...',
+                              command=self.tag_similar)
+        edit_menu.add_separator()
+        edit_menu.add_command(label='Remove duplicates...',
+                              command=self.unduplicate)
+        edit_menu.add_separator()
+        edit_menu.add_command(label='Settings', command=self.open_settings)
+        menubar.add_cascade(label='Edit', menu=edit_menu)
 
         help_menu = tk.Menu(menubar, tearoff=False)
         help_menu.add_command(label='%s Website' % APP_NAME,
@@ -472,7 +475,7 @@ class AppGui(App, ttk.Frame):
 
         self.clear_keyword()
         self.tag_search([self.tags_lb.get(i)
-                            for i in self.tags_lb.curselection()])
+                         for i in self.tags_lb.curselection()])
 
     @searcher
     def search_by_bank(self):

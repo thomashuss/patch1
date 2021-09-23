@@ -63,6 +63,7 @@ class PatchDatabase:
 
         self.__df = meta_df.join(param_df)
         self.__tags = pd.DataFrame(index=self.__df.index, dtype='bool')
+        self.refresh()
 
     # noinspection PyTypeChecker
     def from_disk(self, file):
@@ -74,11 +75,7 @@ class PatchDatabase:
             raise FileNotFoundError
 
         self.__df = store.get(DB_KEY)
-
-        try:
-            self.__tags = store.get(TAGS_KEY)
-        except KeyError:
-            pass
+        self.__tags = store.get(TAGS_KEY)
         store.close()
 
         self.refresh()

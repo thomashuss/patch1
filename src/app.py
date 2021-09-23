@@ -229,18 +229,18 @@ class App:
         self.status(STATUS_IMPORT)
         self.__db.bootstrap(Path(patches_dir))
 
-    def open_database(self, silent=False):
+    def open_database(self, path):
         """Loads a previously saved database."""
 
-        path = self.__db_file
+        if not isinstance(path, Path):
+            path = Path(path)
         if path.is_file():
             try:
                 self.__db.from_disk(path)
                 self.modified_db = False
                 self.refresh()
             except FileNotFoundError:
-                if not silent:
-                    raise Exception('That is not a valid data file.')
+                raise FileNotFoundError('That is not a valid database file.')
 
     def save_database(self, path=None):
         """Saves the active database to the file at `path`, or the default database file."""
@@ -273,7 +273,10 @@ class App:
         self.quick_tmp.touch(exist_ok=True)
 
         if self.__config.getboolean('database', 'auto_load'):
-            self.open_database(silent=True)
+            try:
+                self.open_database(self.__db_file)
+            except FileNotFoundError:
+                ...
 
     def get_config_path(self) -> Path:
         """Returns the `Path` to the `App`'s configuration file."""

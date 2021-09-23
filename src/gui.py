@@ -102,7 +102,7 @@ class AppGui(App, ttk.Frame):
     active_tags: tk.StringVar  # List which populates the tag selection listbox
     patch_list: ttk.Treeview  # Treeview of patches which match the search results
     kwd_entry: ttk.Entry  # Keyword search text box
-    old_selection = None
+    old_selection = None  # Cache the selected patch when refreshing the view
 
     schema: PatchSchema
 
@@ -382,7 +382,6 @@ class AppGui(App, ttk.Frame):
             new_text = 'Found ' + \
                        str(count) + ' patch' + ('es.' if count > 1 else '.')
 
-            # self.patch_list.focus_set()
             self.patch_list.see(kids[0])
         else:
             new_text = 'No patches found.'
@@ -457,10 +456,9 @@ class AppGui(App, ttk.Frame):
             self.remove_tag(self.tags_editor.get(selection[0]))
 
     def refresh(self):
-        """Refreshes the GUI to reflect new cached data."""
+        """Refreshes the view to reflect new cached data."""
 
         super().refresh()
-        # self.clear_search()
         self.active_tags.set(self.tags)
         self.banks_list.set(self.banks)
 

@@ -79,6 +79,7 @@ class App:
     schema: PatchSchema
 
     quick_tmp: Path  # Temporary file for quick export
+    db_file: Path  # Path to the active database file
     active_patch: int = -1  # Index in db of currently active patch
     last_query = ('', '')
     last_result = None
@@ -94,7 +95,6 @@ class App:
 
         self.__data_dir = Path.home() / ('.%s' % APP_NAME_INLINE)
         self.__config_file = self.__data_dir / CONFIG_FILE
-        self.__db_file = self.__data_dir / DB_FILE
         self.schema = schema
         self.__db = PatchDatabase(self.schema)
         self.__config = configparser.ConfigParser()
@@ -232,22 +232,26 @@ class App:
     def open_database(self, path):
         """Loads a previously saved database."""
 
-        if not isinstance(path, Path):
-            path = Path(path)
-        self.__db_file = path
-        if path.is_file():
-            try:
-                self.__db.from_disk(path)
-                self.modified_db = False
-                self.refresh()
-            except FileNotFoundError:
-                raise FileNotFoundError('That is not a valid database file.')
+        try:
+            self.__db.from_disk(path)
+            self.modified_db = False
+
+            if isinstance(path, Path):
+                self.__config.set('database', 'path', str(path))
+                self.db_file = path
+            else:
+                self.__config.set('database', 'path', path)
+                self.db_file = Path(path)
+
+            self.refresh()
+        except FileNotFoundError:
+            raise FileNotFoundError('That is not a valid database file.')
 
     def save_database(self, path=None):
         """Saves the active database to the file at `path`, or the default database file."""
 
         if self.__db.is_active():
-            self.__db.to_disk(path if path else self.__db_file)
+            self.__db.to_disk(path if path else self.db_file)
             self.modified_db = False
 
     @volatile
@@ -273,9 +277,16 @@ class App:
             self.quick_tmp = Path(self.__data_dir / TMP_FXP_NAME).resolve()
         self.quick_tmp.touch(exist_ok=True)
 
+        db_file = self.__config.get('database', 'path', fallback=None)
+        if db_file is None:
+            self.db_file = self.__data_dir / DB_FILE
+            self.__config.set('database', 'path', str(self.db_file))
+        else:
+            self.db_file = Path(db_file)
+
         if self.__config.getboolean('database', 'auto_load'):
             try:
-                self.open_database(self.__db_file)
+                self.open_database(self.db_file)
             except FileNotFoundError:
                 ...
 

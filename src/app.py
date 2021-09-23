@@ -57,12 +57,13 @@ def searcher(func):
     return inner
 
 
-def reloads(func):
-    """Wrapper for functions that require a reload of the view."""
+def volatile(func):
+    """Wrapper for functions that manipulate the active database."""
 
     def inner(self, *args, **kwargs):
         ret = func(self, *args, **kwargs)
         self.refresh()
+        self.modified_db = True
         return ret
 
     return inner
@@ -81,6 +82,7 @@ class App:
     active_patch: int = -1  # Index in db of currently active patch
     last_query = ('', '')
     last_result = None
+    modified_db = False
 
     tags = []  # tag indexes for active database
     banks = []  # bank indexes for active database
@@ -169,7 +171,7 @@ class App:
         if len(self.last_query[0]):
             getattr(self, self.last_query[0])(self.last_query[1])
 
-    @reloads
+    @volatile
     def tag_names(self):
         """Tags patches based on their names."""
 
@@ -177,7 +179,7 @@ class App:
         self.status(STATUS_NAME_TAG)
         self.__db.tags_from_val_defs(TAGS_NAMES, 'patch_name')
 
-    @reloads
+    @volatile
     def tag_names_custom(self, path):
         """Tags patches based on their names, using the custom definitions in the JSON file at `path`."""
 
@@ -186,7 +188,7 @@ class App:
         self.status(STATUS_NAME_TAG)
         self.__db.tags_from_val_defs(tags_names, 'patch_name')
 
-    @reloads
+    @volatile
     def tag_similar(self):
         """Tags patches based on their similarity to other patches."""
 
@@ -198,13 +200,13 @@ class App:
         self.status(STATUS_SIM_TAG)
         self.__db.classify_tags()
 
-    @reloads
+    @volatile
     def add_tag(self, tag: str):
         """Adds `tag` to the active patch's tags."""
 
         self.__db.change_tags(self.active_patch, [tag], False)
 
-    @reloads
+    @volatile
     def remove_tag(self, tag: str):
         """Removes `tag` from the active patch's tags."""
 
@@ -220,14 +222,13 @@ class App:
         else:
             self.wait()
 
-    @reloads
+    @volatile
     def new_database(self, patches_dir):
         """Creates a new database with patches from `dir`."""
 
         self.status(STATUS_IMPORT)
         self.__db.bootstrap(Path(patches_dir))
 
-    @reloads
     def open_database(self, silent=False):
         """Loads a previously saved database."""
 
@@ -235,17 +236,20 @@ class App:
         if path.is_file():
             try:
                 self.__db.from_disk(path)
+                self.modified_db = False
+                self.refresh()
             except FileNotFoundError:
                 if not silent:
                     raise Exception('That is not a valid data file.')
 
-    def save_database(self):
-        """Saves the active database to disk."""
+    def save_database(self, path=None):
+        """Saves the active database to the file at `path`, or the default database file."""
 
-        if self.__db.is_active():
-            self.__db.to_disk(self.__db_file)
+        if self.__db.is_active() and self.modified_db:
+            self.__db.to_disk(path if path else self.__db_file)
+            self.modified_db = False
 
-    @reloads
+    @volatile
     def unduplicate(self):
         """Removes duplicate patches from the database."""
 

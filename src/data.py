@@ -16,18 +16,6 @@ PATCH_FILE = 'patch'
 JOBS = min(4, cpu_count())
 
 
-def volatile_db(func):
-    """Wrapper for functions that modify the active database."""
-
-    def inner(self, *args, **kwargs):
-        ret = func(self, *args, **kwargs)
-        self.modified_db = True
-        self.refresh()
-        return ret
-
-    return inner
-
-
 class PatchDatabase:
     """Model for a pandas-based patch database conforming to a `PatchSchema`."""
 
@@ -35,9 +23,6 @@ class PatchDatabase:
     __tags: pd.DataFrame
     __knn = None
     schema: PatchSchema
-
-    modified_db = False
-    modified_cls = False
 
     tags: pd.Index = pd.Index([])
     banks = []
@@ -47,7 +32,6 @@ class PatchDatabase:
 
         self.schema = schema
 
-    @volatile_db
     def bootstrap(self, root_dir: Path):
         """Creates a new database from the contents of the specified directory and loads the database."""
 
@@ -102,11 +86,10 @@ class PatchDatabase:
     def to_disk(self, file):
         """Saves the active database to the `file`."""
 
-        if self.modified_db:
-            store = pd.HDFStore(str(file), mode='w')
-            store.put(DB_KEY, self.__df, format='table')
-            store.put(TAGS_KEY, self.__tags)
-            store.close()
+        store = pd.HDFStore(str(file), mode='w')
+        store.put(DB_KEY, self.__df, format='table')
+        store.put(TAGS_KEY, self.__tags)
+        store.close()
 
     def is_active(self) -> bool:
         """Returns `True` if a database is loaded, `False` otherwise."""
@@ -189,7 +172,6 @@ class PatchDatabase:
         self.__knn.fit(X_train, y_train)
         return float(self.__knn.score(X_test, y_test))
 
-    @volatile_db
     def classify_tags(self):
         """Tags patches based on their parameters using the previously generated classifier model."""
 
@@ -199,7 +181,6 @@ class PatchDatabase:
             self.__df[self.schema.params].to_numpy())
         self.__update_tags()
 
-    @volatile_db
     def tags_from_val_defs(self, re_defs: dict, col: str):
         """Tags patches in the database, where the patch's `col` value matches a regular expression in `re_defs`,
         with the dictionary key of the matching expression."""
@@ -212,7 +193,6 @@ class PatchDatabase:
 
         self.__update_tags()
 
-    @volatile_db
     def change_tags(self, index: int, tags: list, replace: bool = True):
         """Changes the tags of the patch at `index` to `tags`. If `replace` is `False`, `tags` will be added to the
         patch's existing tags."""
@@ -223,7 +203,6 @@ class PatchDatabase:
         self.__tags.loc[index, tags] = True
         self.__update_tags(index)
 
-    @volatile_db
     def remove_duplicates(self):
         """Removes duplicate patches from the database."""
 

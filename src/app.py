@@ -234,6 +234,7 @@ class App:
 
         if not isinstance(path, Path):
             path = Path(path)
+        self.__db_file = path
         if path.is_file():
             try:
                 self.__db.from_disk(path)

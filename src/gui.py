@@ -128,8 +128,8 @@ class AppGui(App, ttk.Frame):
 
         menubar = tk.Menu(self.master)
         file_menu = tk.Menu(menubar, tearoff=False)
-        file_menu.add_command(label='Create new database...',
-                              command=self.new_database_prompt)
+        file_menu.add_command(label='Create new database...', command=self.new_database_prompt)
+        file_menu.add_command(label='Open database...', command=self.open_database_prompt)
         file_menu.add_command(label='Save database...', command=self.save_database)
         file_menu.add_command(label='Save database as...', command=self.save_database_prompt)
         file_menu.add_separator()
@@ -511,6 +511,13 @@ class AppGui(App, ttk.Frame):
             title='Select the folder containing your banks:', initialdir=INITIAL_DIR)
         if len(new_dir) != 0:
             self.new_database(new_dir)
+
+    def open_database_prompt(self):
+        """Prompts the user to select an existing database file."""
+
+        db_file = filedialog.askopenfilename(title='Select a database file:', initialdir=INITIAL_DIR)
+        if len(db_file) != 0:
+            self.open_database(db_file)
 
     def save_database_prompt(self):
         """Prompts the user to select a file to save the active database into."""

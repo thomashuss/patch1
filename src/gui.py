@@ -140,7 +140,8 @@ class AppGui(App, ttk.Frame):
         edit_menu.add_cascade(label='Run name-based tagging with...', menu=name_tagging_menu)
         name_tagging_menu.add_command(label='built-in definitions',
                                       command=self.tag_names)
-        name_tagging_menu.add_command(label='custom definitions')
+        name_tagging_menu.add_command(label='custom definitions',
+                                      command=self.custom_tags_prompt)
         edit_menu.add_command(label='Run parameter-based tagging...',
                               command=self.tag_similar)
         edit_menu.add_separator()
@@ -512,6 +513,14 @@ class AppGui(App, ttk.Frame):
         if len(new_dir) != 0:
             self.new_database(new_dir)
 
+    def custom_tags_prompt(self):
+        """Prompts the user to select a Python file defining custom tags."""
+
+        tags_file = filedialog.askopenfilename(title='Select a JSON file:', initialdir=FILE_KWARGS['initialdir'],
+                                               filetypes=(('JSON files', '*.json'),))
+        if len(tags_file) != 0:
+            self.tag_names_custom(tags_file)
+
     def end(self):
         """Closes the program."""
 
@@ -520,6 +529,8 @@ class AppGui(App, ttk.Frame):
         self.master.destroy()
 
     def open_settings(self):
+        """Placeholder for a future settings GUI."""
+
         self.info("To change the program's settings, edit the file at %s. Please refer to the documentation first."
                   % self.get_config_path())
 

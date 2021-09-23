@@ -1,5 +1,6 @@
 import configparser
 import re
+import json
 from pathlib import Path
 from src.data import *
 from src.common import *
@@ -175,6 +176,15 @@ class App:
         from src.sorting import TAGS_NAMES
         self.status(STATUS_NAME_TAG)
         self.__db.tags_from_val_defs(TAGS_NAMES, 'patch_name')
+
+    @reloads
+    def tag_names_custom(self, path):
+        """Tags patches based on their names, using the custom definitions in the JSON file at `path`."""
+
+        with open(path, 'r') as f:
+            tags_names = json.load(f)
+        self.status(STATUS_NAME_TAG)
+        self.__db.tags_from_val_defs(tags_names, 'patch_name')
 
     @reloads
     def tag_similar(self):

@@ -514,7 +514,7 @@ class AppGui(App, ttk.Frame):
             self.new_database(new_dir)
 
     def custom_tags_prompt(self):
-        """Prompts the user to select a Python file defining custom tags."""
+        """Prompts the user to select a JSON file defining custom tags."""
 
         tags_file = filedialog.askopenfilename(title='Select a JSON file:', initialdir=FILE_KWARGS['initialdir'],
                                                filetypes=(('JSON files', '*.json'),))

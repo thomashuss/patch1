@@ -85,7 +85,7 @@ class PatchDatabase:
         """Loads a database from the `file`."""
 
         try:
-            store = pd.HDFStore(str(file), mode='r')
+            store = pd.HDFStore(file, mode='r')
         except (HDF5ExtError, OSError):
             raise FileNotFoundError
 

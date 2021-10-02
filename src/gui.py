@@ -1,4 +1,3 @@
-import _tkinter
 import os
 import sys
 import tkinter as tk
@@ -6,6 +5,7 @@ import webbrowser
 from pathlib import Path
 from collections import namedtuple
 from tkinter import ttk, messagebox, filedialog, font, simpledialog
+from _tkinter import TclError
 from traceback import print_exception
 from src.app import *
 from src.common import *
@@ -466,7 +466,7 @@ class AppGui(App, ttk.Frame):
         if self.old_selection is not None:
             try:
                 self.patch_list.selection_set(self.old_selection)
-            except _tkinter.TclError:
+            except TclError:
                 ...
 
     @searcher

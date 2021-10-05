@@ -17,6 +17,6 @@ setup(
     ],
     include_package_data=True,
     entry_points={
-        'console_scripts': ['patch1=src.__init__:main']
+        'gui_scripts': ['patch1=src.__init__:main']
     }
 )

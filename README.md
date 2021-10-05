@@ -1,0 +1,3 @@
+# Patch1
+
+Patch1 is a preset manager for virtual synthesizers, namely [Synth1](https://daichilab.sakura.ne.jp/softsynth/index.html). Written in Python and built on high level libraries [pandas](https://pandas.pydata.org/) and [scikit-learn](https://scikit-learn.org/), and providing a graphical frontend through [tkinter](https://docs.python.org/3/library/tkinter.html), it is designed to be modular and hackable.

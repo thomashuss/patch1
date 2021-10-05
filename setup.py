@@ -12,8 +12,7 @@ setup(
     install_requires=[
         'pandas>=1.2.3',
         'sklearn>=0.0',
-        'tables>=3.6.1',
-        'tkinterdnd2>=0.3.0'
+        'tables>=3.6.1'
     ],
     include_package_data=True,
     entry_points={

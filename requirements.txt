@@ -8,7 +8,3 @@ numpy >= 1.20.2
 # On Windows, download an unofficial wheel from https://www.lfd.uci.edu/~gohlke/pythonlibs/#pytables
 # On Mac: brew install hdf5 c-blosc
 tables >= 3.6.1
-
-# Install manually from https://github.com/pmgagne/tkinterdnd2
-# After cloning the repo, change the package name to "tkinterdnd2" in setup.py
-tkinterdnd2 >= 0.3.0

@@ -11,6 +11,7 @@ venv
 patch1.egg-info
 *.spec
 *.pyo
+.python-version
 
 # Nobody cares, Tim Cook.
 .DS_Store

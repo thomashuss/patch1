@@ -16,12 +16,13 @@ class PatchSchema:
     file_base: str  # What to put to the left of the "." in a temporary patch file name
     file_ext: str = None  # Extension of a patch file, if the synth stores patches in a native format
 
-    metas: list[str]  # Names of all metadata types specific to this schema, not including the patch's name.
+    metas: list  # Names of all metadata types specific to this schema, not including the patch's name.
     defaults: list  # Ordered default values of metadata
-    # Possible values for any ranged metadata values
-    possibilites: dict[str, list]
+    # Possible values for any categorical metadata values
+    # Key is the name of the parameter, value is a list of possible values.
+    possibilites: dict
 
-    params: list[str]  # Names of parameters
+    params: list  # Names of parameters
     param_dtype: Type  # Data type of parameter values
     # This will be filled automatically; total number of parameters
     num_params: int

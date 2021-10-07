@@ -178,6 +178,8 @@ class PatchDatabase:
             self.__df[self.schema.params].to_numpy())
         self.__update_tags()
 
+        del self.__knn
+
     def tags_from_val_defs(self, re_defs: dict, col: str):
         """Tags patches in the database, where the patch's `col` value matches a regular expression in `re_defs`,
         with the dictionary key of the matching expression."""

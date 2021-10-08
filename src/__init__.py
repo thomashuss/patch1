@@ -2,9 +2,7 @@ try:
     from tkinterdnd2 import Tk
     DND_SUPPORT = True
 except ImportError:
-    print('Drag and drop support is disabled. To enable it, install tkinterdnd2:',
-          'https://github.com/pmgagne/tkinterdnd2')
-    print('Be sure to rename the package to "tkinterdnd2" by editing the setup.py file.')
+    print('Drag and drop support is disabled. Consult the README for more information.')
     from tkinter import Tk
     DND_SUPPORT = False
 

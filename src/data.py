@@ -143,14 +143,13 @@ class PatchDatabase:
         assert isinstance(self.__df[col].dtype, pd.CategoricalDtype)
         return self.__df[col].cat.categories.to_list()
 
-    def train_classifier(self) -> float:
+    def train_classifier(self):
         """Constructs a k-nearest neighbors classifier for patches based on their parameters. The classifier is not
-        intended to persist across sessions. Returns the accuracy of the classifier."""
+        intended to persist across sessions."""
 
         from sklearn.pipeline import Pipeline
         from sklearn.neighbors import KNeighborsClassifier
         from sklearn.preprocessing import StandardScaler
-        from sklearn.model_selection import train_test_split
 
         df = self.__df.drop_duplicates(self.schema.params)
         tags = self.__tags.loc[df.index].fillna(False)
@@ -163,11 +162,9 @@ class PatchDatabase:
         X = df[self.schema.params].to_numpy()
         y = tags.to_numpy(dtype='bool')
 
-        X_train, X_test, y_train, y_test = train_test_split(X, y)
         self.__knn = Pipeline([('scaler', StandardScaler()), ('knn', KNeighborsClassifier(
             n_jobs=JOBS, p=1, weights='distance'))])
-        self.__knn.fit(X_train, y_train)
-        return float(self.__knn.score(X_test, y_test))
+        self.__knn.fit(X, y)
 
     def classify_tags(self):
         """Tags patches based on their parameters using the previously generated classifier model."""

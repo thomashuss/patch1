@@ -193,10 +193,7 @@ class App:
         """Tags patches based on their similarity to other patches."""
 
         self.status(STATUS_WAIT)
-        acc = self.__db.train_classifier()
-        self.info('Based on your current tags, this tagging method is estimated to be %f%% accurate. ' % (acc * 100) +
-                  'To improve its accuracy, manually tag some untagged patches and correct existing tags, then run '
-                  'this again.')
+        self.__db.train_classifier()
         self.status(STATUS_SIM_TAG)
         self.__db.classify_tags()
 

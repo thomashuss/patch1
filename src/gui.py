@@ -128,9 +128,9 @@ class AppGui(App, ttk.Frame):
 
         menubar = tk.Menu(self.master)
         file_menu = tk.Menu(menubar, tearoff=False)
-        file_menu.add_command(label='Create new database...', command=self.new_database_prompt)
+        file_menu.add_command(label='Create new database', command=self.new_database_prompt)
         file_menu.add_command(label='Open database...', command=self.open_database_prompt)
-        file_menu.add_command(label='Save database...', command=self.save_database)
+        file_menu.add_command(label='Save database', command=self.save_database)
         file_menu.add_command(label='Save database as...', command=self.save_database_prompt)
         file_menu.add_separator()
         file_menu.add_command(label='Exit', command=self.end)
@@ -143,10 +143,10 @@ class AppGui(App, ttk.Frame):
                                       command=self.tag_names)
         name_tagging_menu.add_command(label='custom definitions',
                                       command=self.custom_tags_prompt)
-        edit_menu.add_command(label='Run parameter-based tagging...',
+        edit_menu.add_command(label='Run parameter-based tagging',
                               command=self.tag_similar)
         edit_menu.add_separator()
-        edit_menu.add_command(label='Remove duplicates...',
+        edit_menu.add_command(label='Remove duplicates',
                               command=self.unduplicate)
         edit_menu.add_separator()
         edit_menu.add_command(label='Settings', command=self.open_settings)

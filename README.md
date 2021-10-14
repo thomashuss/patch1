@@ -78,7 +78,7 @@ in the `tkinterdnd2` directory.
 
 When you first launch Patch1, you'll need to create a database. Select `File -> Create new database` and select a directory containing your Synth1 banks; in other words, a directory containing directories containing `.sy1` files. After a few seconds, assuming the files and directory structure are formatted properly, you'll have a new database, as evidenced by the bank names in the lower-left box.
 
-The first step after creating a new database may be tagging some of your patches. A good starting point is the built-in tag definitions, which tags your patches based on their names. Select `Edit -> Run name-based tagging with... -> built-in definitions`, and after a few seconds, you'll notice some tag names in the upper-left box.
+The first step after creating a new database may be to tag some of your patches. A good starting point is the built-in tag definitions, which tags your patches based on their names. Select `Edit -> Run name-based tagging with... -> built-in definitions`, and after a few seconds, you'll notice some tag names in the upper-left box.
 
 ### Navigating the interface
 

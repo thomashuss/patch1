@@ -16,6 +16,17 @@ PATCH_FILE = 'patch'
 JOBS = min(4, cpu_count())
 
 
+def updates(func):
+    """Wrapper for functions that require an update of the database."""
+
+    def inner(self, *args, **kwargs):
+        ret = func(self, *args, **kwargs)
+        self.refresh()
+        return ret
+
+    return inner
+
+
 class PatchDatabase:
     """Model for a pandas-based patch database conforming to a `PatchSchema`."""
 
@@ -96,7 +107,8 @@ class PatchDatabase:
     def refresh(self):
         """Rebuilds cached indexes for, and cleans up, the active database."""
 
-        self.__tags = self.__tags.loc[self.__df.index].fillna(False)
+        self.__clean_tags()
+
         self.tags = self.__tags.columns
         self.banks = self.get_categories('bank')
 
@@ -199,10 +211,26 @@ class PatchDatabase:
         self.__tags.loc[index, tags] = True
         self.__update_tags(index)
 
+    @updates
     def remove_duplicates(self):
         """Removes duplicate patches from the database."""
 
         self.__df = self.__df.drop_duplicates(self.schema.params)
+
+    def __clean_tags(self):
+        """Internal use only. Removes unused tags, sorts columns, and fills empty values."""
+
+        # Re-fit tags df if a patch was added or removed
+        if len(self.__df) < len(self.__tags):
+            self.__tags = self.__tags.loc[self.__df.index]
+        elif len(self.__df) > len(self.__tags):
+            self.__tags.append(pd.DataFrame(columns=self.__tags.columns,
+                                            index=range(0, len(self.__df) - len(self.__tags)))
+                               .fillna(False), ignore_index=True)
+
+        # Remove unused tags and sort columns
+        tags_any = self.__tags.any()
+        self.__tags = self.__tags[sorted(self.__tags.columns[tags_any], key=lambda s: s.lower())]
 
     def __update_tags(self, index=None):
         """Internal use only. Updates the stringified tags for the patch at `index` or the entire database, and
@@ -210,8 +238,7 @@ class PatchDatabase:
 
         sep = ', '
 
-        # Get rid of unused tags, sort columns, and fill na values
-        self.__tags = self.__tags[sorted(self.__tags.columns[self.__tags.any()], key=lambda s: s.lower())].fillna(False)
+        self.__tags = self.__tags.fillna(False)
         self.refresh()
         if index is not None:
             patch = self.__tags.iloc[index]

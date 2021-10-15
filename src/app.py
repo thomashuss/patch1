@@ -135,11 +135,14 @@ class App:
 
         if self.active_patch > -1:
             patch = self.last_result.loc[self.active_patch]
-            return {
-                'name': patch['patch_name'],
-                'bank': patch['bank'],
-                'tags': self.__db.get_tags(self.active_patch)
-            }
+            try:
+                return {
+                    'name': patch['patch_name'],
+                    'bank': patch['bank'],
+                    'tags': self.__db.get_tags(self.active_patch)
+                }
+            except IndexError:
+                return dict()
         else:
             return dict()
 

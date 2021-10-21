@@ -221,12 +221,16 @@ class PatchDatabase:
         """Internal use only. Re-fits the tag DataFrame to the patch DataFrame, removes unused tags, sorts columns,
         and fills empty values."""
 
-        # Re-fit tags df if a patch was added or removed
-        if len(self.__df) < len(self.__tags):
+        df_l = len(self.__df)
+        tags_l = len(self.__tags)
+
+        # Re-fit tags df if a patch was removed...
+        if df_l < tags_l:
             self.__tags = self.__tags.loc[self.__df.index]
-        elif len(self.__df) > len(self.__tags):
+        # ...or added
+        elif df_l > tags_l:
             self.__tags.append(pd.DataFrame(columns=self.__tags.columns,
-                                            index=range(0, len(self.__df) - len(self.__tags)))
+                                            index=range(0, df_l - tags_l))
                                .fillna(False), ignore_index=True)
 
         # Remove unused tags and sort columns

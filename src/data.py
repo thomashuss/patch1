@@ -218,7 +218,8 @@ class PatchDatabase:
         self.__df = self.__df.drop_duplicates(self.schema.params)
 
     def __clean_tags(self):
-        """Internal use only. Removes unused tags, sorts columns, and fills empty values."""
+        """Internal use only. Re-fits the tag DataFrame to the patch DataFrame, removes unused tags, sorts columns,
+        and fills empty values."""
 
         # Re-fit tags df if a patch was added or removed
         if len(self.__df) < len(self.__tags):
@@ -229,8 +230,7 @@ class PatchDatabase:
                                .fillna(False), ignore_index=True)
 
         # Remove unused tags and sort columns
-        tags_any = self.__tags.any()
-        self.__tags = self.__tags[sorted(self.__tags.columns[tags_any], key=lambda s: s.lower())]
+        self.__tags = self.__tags[sorted(self.__tags.columns[self.__tags.any()], key=lambda s: s.lower())]
 
     def __update_tags(self, index=None):
         """Internal use only. Updates the stringified tags for the patch at `index` or the entire database, and

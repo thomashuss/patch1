@@ -153,6 +153,6 @@ Patch1's configuration file will be in `~/.patch1/config.ini` (on Windows, `~` i
 
 - `auto_load`: Whether to load the database at `path` on program launch. Can be `True` (default) or `False`.
 - `auto_save`: Whether to save the loaded database on program exit. Can be `True` (default) or `False`.
-- `path`: Absolute path to the database file to open at launch if `auto_load` is `True`. This is set to the path of the open database file after a database file is opened. Defaults to `~/.patch1/db`.
+- `path`: Absolute path to the database file to open at launch if `auto_load` is `True`. This is set to the path of the open database file after a database file is opened. Defaults to the absolute path to `~/.patch1/db`.
 - `export_as`: The file format to used for the drag-and-drop quick export functionality. Can be `chunk` (FXP preset file with opaque binary chunk) (default), `params` (FXP preset file with normalized parameters [**NOT FUNCTIONAL** for Synth1]), or `patch` (synth's native patch file).
 - `export_to`: The directory to show in the file save dialog when using one of the export buttons. This is set to the last directory selected by the aforementioned file save dialog. Defaults to the absolute path to your home directory, or user profile folder on Windows.

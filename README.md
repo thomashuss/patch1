@@ -11,7 +11,7 @@ Patch1 is a preset manager for virtual synthesizers, namely [Synth1](https://dai
   - **Programatically** using regular expressions (built-in or user-defined)
   - **Automatically** using machine learning
   - **Manually** using the tag editor
-- Export patches in the synth's native file format, or VST standard FXP (AUPreset support coming soon)
+- Export patches in the synth's native file format, or VST standard FXP (AUPreset support coming ~~soon~~)
 - Drag-and-drop patches directly into your DAW (if supported) or file manager
 - API for patch file schemas -- you can modify the program for use with other synths
 - Fast and efficient thanks to the highly optimized `pandas` library

@@ -2,7 +2,7 @@
 
 APP_NAME = 'Patch1'
 APP_NAME_INLINE = APP_NAME.lower()
-APP_WEBSITE = 'https://github.com/intrlocutr/' + APP_NAME_INLINE
+APP_WEBSITE = 'https://github.com/thomashuss/' + APP_NAME_INLINE
 FXP_FILE_EXT = 'fxp'
 
 # Some people like to put weird things in their files.

@@ -4,9 +4,8 @@ setup(
     name="patch1",
     version="1.0.0.dev1",
     description="Tame your Synth1 patches",
-    url="https://github.com/intrlocutr/patch1",
-    author="intrlocutr",
-    author_email="intrlocutr@outlook.com",
+    url="https://github.com/thomashuss/patch1",
+    author="thomashuss",
     license="MIT",
     packages=find_packages(include=['src']),
     install_requires=[

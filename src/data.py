@@ -1,4 +1,3 @@
-import multiprocessing
 import numpy as np
 import pandas as pd
 import re
@@ -51,13 +50,11 @@ class PatchDatabase:
 
         meta = []
         params = []
-        # Running *all* this I/O on a single thread is just so slow...
-        with multiprocessing.Pool(processes=JOBS) as pool:
-            for patch in pool.imap_unordered(self.schema.read_patchfile, files):
-                if patch:
-                    params.append(patch['params'])
-                    del patch['params']
-                    meta.append(patch)
+        for patch in map(self.schema.read_patchfile, files):
+            if patch:
+                params.append(patch['params'])
+                del patch['params']
+                meta.append(patch)
 
         init_patch = pd.Series(
             self.schema.values, index=self.schema.params, dtype=self.schema.param_dtype)

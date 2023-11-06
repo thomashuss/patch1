@@ -10,6 +10,6 @@ from src.gui import AppGui
 
 
 def main():
-    root = Tk()
+    root = Tk(className='patch1')
     AppGui(root)
     root.mainloop()

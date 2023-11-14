@@ -93,14 +93,16 @@ class Synth1(PatchSchema):
         lst = file.split('\n')
 
         if len(lst) >= 4:
-            if lst[1][:5] == 'color':
-                lst[1] = lst[1].lower()
+            color = lst[1].lower()
+            if color[:5] == 'color':
+                lst[1] = color
             else:
                 lst[1:1] = ['color=' +
                             self.defaults[self.metas.index('color')]]
 
-            if lst[2][:3] == 'ver':
-                lst[2] = lst[2].lower()
+            ver = lst[2].lower()
+            if ver[:3] == 'ver':
+                lst[2] = ver
             else:
                 lst[2:2] = ['ver=' + self.defaults[self.metas.index('ver')]]
 

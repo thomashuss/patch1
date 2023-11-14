@@ -60,8 +60,8 @@ class PatchDatabase:
             self.schema.values, index=self.schema.params, dtype=self.schema.param_dtype)
 
         meta_df = pd.DataFrame(meta)
-        param_df = pd.DataFrame(params, columns=self.schema.params,
-                                dtype=int).fillna(init_patch)
+        param_df = pd.DataFrame(params,
+                                columns=self.schema.params).fillna(init_patch).astype(int)
 
         meta_df['bank'] = pd.Categorical(meta_df['bank'])
         meta_df['tags'] = ''

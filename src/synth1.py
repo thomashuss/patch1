@@ -93,11 +93,15 @@ class Synth1(PatchSchema):
         lst = file.split('\n')
 
         if len(lst) >= 4:
-            if lst[1][:5] != 'color':
+            if lst[1][:5] == 'color':
+                lst[1] = lst[1].lower()
+            else:
                 lst[1:1] = ['color=' +
                             self.defaults[self.metas.index('color')]]
 
-            if lst[2][:3] != 'ver':
+            if lst[2][:3] == 'ver':
+                lst[2] = lst[2].lower()
+            else:
                 lst[2:2] = ['ver=' + self.defaults[self.metas.index('ver')]]
 
             # Remove trailing newline

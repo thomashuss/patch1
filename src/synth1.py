@@ -47,7 +47,7 @@ class Synth1(PatchSchema):
     # Only explicity mentioned platform is darwin, as the other Synth1 release is win32, which,
     # either natively or through a compat layer (Wine), will run on all other platforms.
     vst_id = 1450726194 if platform == 'darwin' else 1395742323
-    file_pattern = r'^[0-9]{3}\.sy1$'
+    file_pattern = r'^[0-9]{3}\.[s|S][y|Y]1$'
     file_base = '001'
     file_ext = 'sy1'
 

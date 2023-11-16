@@ -45,7 +45,7 @@ class PatchDatabase:
     def bootstrap(self, root_dir: Path):
         """Creates a new database from the contents of the specified directory and loads the database."""
 
-        re_file = re.compile(self.schema.file_pattern)
+        re_file = re.compile(self.schema.file_pattern, flags=re.IGNORECASE)
         files = filter(lambda f: re_file.match(f.name) is not None, root_dir.glob('**/*'))
 
         meta = []

@@ -1,6 +1,8 @@
-#/bin/sh
+#!/bin/sh
 # Always build in a virtualenv!
-#virtualenv venv
+if ! [ -d venv ]; then
+    virtualenv venv
+fi
 source venv/bin/activate
 pyinstaller __main__.py \
     --noconfirm \

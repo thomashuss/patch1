@@ -1,7 +1,7 @@
 # Install to a virtualenv. It'll make the resulting pyinstaller package way smaller.
 
 pandas >= 1.2.3
-sklearn >= 0.0
+scikit-learn >= 1.2.1
 numpy >= 1.20.2
 
 # Unfortunately, pytables doesn't have wheels for cp3.9 on Windows or Mac, and the build will probably fail.

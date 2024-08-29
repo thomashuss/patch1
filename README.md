@@ -2,16 +2,16 @@
 
 ![patch1](https://user-images.githubusercontent.com/45053302/135959491-83fc93dc-621d-4299-b94d-11fd3664b08d.png)
 
-Patch1 is a preset manager for virtual synthesizers, namely [Synth1](https://daichilab.sakura.ne.jp/softsynth/index.html). Written in Python and built on [`pandas`](https://pandas.pydata.org/), and providing a graphical frontend through [`tkinter`](https://docs.python.org/3/library/tkinter.html), it is designed to be modular and hackable.
+Patch1 is a preset manager for virtual synthesizers, namely [Synth1](https://daichilab.sakura.ne.jp/softsynth/index.html).
 
 ## Features
 
 - Intuitive three-pane layout
 - Organize your library with tags
-  - **Programatically** using regular expressions (built-in or user-defined)
-  - **Automatically** using machine learning
-  - **Manually** using the tag editor
-- Export patches in the synth's native file format, or VST standard FXP (AUPreset support coming ~~soon~~)
+  - Programatically using regular expressions (built-in or user-defined)
+  - Automatically using scikit-learn
+  - Manually using the tag editor
+- Export patches in the synth's native file format, or VST standard FXP
 - Drag-and-drop patches directly into your DAW (if supported) or file manager
 - API for patch file schemas -- you can modify the program for use with other synths
 - Fast and efficient thanks to the highly optimized `pandas` library
@@ -44,20 +44,16 @@ Patch1 can be installed as a Python package, which allows you to simply run the 
 python3 setup.py install --user
 ```
 
-### Pre-built package
-
-In the future, Patch1 may be distributed as a pre-built package (with [PyInstaller](https://www.pyinstaller.org/)) for those who don't have Python on their computer, aren't planning on customizing their installation, and want a pre-configured environment ideal for Patch1. The obvious downside to this is the large download size due to the inclusion of Python and all dependencies. If you'd like to build your own PyInstaller package of Patch1, you can use the `build_win.ps1` or `build_mac.sh` script.
-
 ### Drag-and-drop support (optional)
 
-Patch1 offers a drag-and-drop feature which allows you to seamlessly drag a patch from the program into your DAW or file manager (see [Quick export](#quick-export)). To take advantage of this, install the [`tkinterdnd2`](https://github.com/pmgagne/tkinterdnd2) package. It's not in the PyPI, so it is optional. (Patch1 will politely inform you via the console that drag-and-drop is disabled if it isn't installed.)
+Patch1 offers a drag-and-drop feature which allows you to seamlessly drag a patch from the program into your DAW or file manager (see [Quick export](#quick-export)). To take advantage of this, install the [`tkinterdnd2`](https://github.com/pmgagne/tkinterdnd2) package.
 
 Clone the `tkinterdnd2` repository:
 ```
 git clone https://github.com/pmgagne/tkinterdnd2.git
 ```
 
-Here's where it's a bit tricky. The Python package itself isn't actually named `tkinterdnd2`, so you'll need to rename it yourself. Open the `setup.py` file and change the line that reads
+Open the `setup.py` file and change the line that reads
 ```
 name="tkinterdnd2-pmgagne", # Replace with your own username
 ```
@@ -66,7 +62,7 @@ to
 name="tkinterdnd2",
 ```
 
-Then just run
+Then run
 ```
 python3 setup.py install --user
 ```
@@ -76,7 +72,7 @@ in the `tkinterdnd2` directory.
 
 ### Getting started
 
-When you first launch Patch1, you'll need to create a database. Select `File -> Create new database` and select a directory containing your Synth1 banks; in other words, a directory containing directories containing `.sy1` files. After a few seconds, assuming the files and directory structure are formatted properly, you'll have a new database, as evidenced by the bank names in the lower-left box.
+When you first launch Patch1, you'll need to create a database. Select `File -> Create new database` and select a directory containing your Synth1 banks (a directory containing directories containing `.sy1` files). After a few seconds, assuming the files and directory structure are formatted properly, you'll have a new database, as evidenced by the bank names in the lower-left box.
 
 The first step after creating a new database may be to tag some of your patches. A good starting point is the built-in tag definitions, which tags your patches based on their names. Select `Edit -> Run name-based tagging with... -> built-in definitions`, and after a few seconds, you'll notice some tag names in the upper-left box.
 
@@ -111,8 +107,6 @@ The organization of a Patch1 library revolves around tags.
 
 Once a patch has been selected in the Patch List Pane, you are able to edit its tags in the Meta Pane. To add a tag to the selected patch, click the `Add Tag` button and enter the desired tag in the prompt. To remove a tag, select it in the tag editor list and click the `Remove Tag` button.
 
-Of course, it's impractical to manually add tags to tens or hundreds of thousands of patches. That's where name- and parameter-based tagging come in.
-
 #### Name-based tagging
 
 This method tags patches whose name matches a regular expression. All name-based tagging functionality is available in the `Edit -> Run name-based tagging with...` menu; Patch1 comes with its own reasonable definitions (the `built-in definitions` option), or you can define your own in a JSON file (the `custom definitions` option).
@@ -129,7 +123,7 @@ In a tagging definitions JSON file, the key should be the name of the tag, and t
 
 Parameter-based tagging uses machine learning. It's designed to fill the gaps left by name-based tagging, as patches may not specify their timbre in the name.
 
-This method trains a nearest neighbors classifier model on the database's existing tags, so you'll need to have a good number of patches tagged before attempting this. Note that this will apply tags just as any other method, so if they are horribly inaccurate, there is no way to remove them all in one click. Therefore, to make sure you have a big enough sample size, it's recommended to run name-based tagging first.
+This method trains a nearest neighbors classifier model on the database's existing tags, so many patches should be tagged before attempting this. Note that this will apply tags just as any other method, so if they are inaccurate, there is no way to remove them all in one click.
 
 To activate this method, select `Edit -> Run parameter-based tagging`.
 
